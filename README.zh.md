@@ -89,7 +89,7 @@ Worker 作为控制平面，在可能的情况下对文件数据进行流式传�
    npx wrangler r2 bucket create ilist-r2
    ```
 
-4. **配置 `wrangler.jsonc`、自定义域名并应用 D1 迁移。** 将 Wrangler 返回的 D1 `database_id` 复制到 `wrangler.jsonc`，确认数据库和存储桶名称；只有当 `ilist.chius.cc` 位于你的 Cloudflare zone 时，才保留已配置的该自定义域名路由。然后运行：
+4. **配置 `wrangler.jsonc`、自定义域名并应用 D1 迁移。** 将 Wrangler 返回的 D1 `database_id` 复制到 `wrangler.jsonc`，确认数据库和存储桶名称；只有当 `ilist.chius.dev` 位于你的 Cloudflare zone 时，才保留已配置的该自定义域名路由。然后运行：
 
    ```bash
    npx wrangler d1 migrations apply ilist-d1 --remote
@@ -121,7 +121,7 @@ Worker 作为控制平面，在可能的情况下对文件数据进行流式传�
    npx wrangler secret put PUBLIC_ORIGIN
    ```
 
-   规范生产值为 `https://ilist.chius.cc`。`PUBLIC_ORIGIN` 必须与实际部署的 HTTPS origin 完全一致，且不能带末尾斜杠。
+   规范生产值为 `https://ilist.chius.dev`。`PUBLIC_ORIGIN` 必须与实际部署的 HTTPS origin 完全一致，且不能带末尾斜杠。
 
 7. **运行 `npm run check` 和 `npm run deploy`。**
 
@@ -136,11 +136,11 @@ Worker 作为控制平面，在可能的情况下对文件数据进行流式传�
 
 登录后打开 `/admin/storages`。每个挂载都有自己的显示名称、顶层挂载路径、提供商及加密凭据、公开或私有可见性、启用状态以及可选的提供商根路径。断开连接只会移除账户授权，并保留可复用的应用/提供商配置；删除挂载会移除 ilist 挂载及其全部凭据。两者都不会删除提供商账户、存储桶、云盘或已存储对象。
 
-对于 OneDrive Personal，请遵循 [docs/onedrive-setup.md](docs/onedrive-setup.md)。使用一个仅配置为个人 Microsoft 账户的 Microsoft Entra 应用，并设置 Web 重定向 URI `https://ilist.chius.cc/api/admin/oauth/onedrive/callback` 以及委托的 Graph 权限 `User.Read` 和 `Files.ReadWrite`，然后在 `/admin/storages` 输入应用凭据。
+对于 OneDrive Personal，请遵循 [docs/onedrive-setup.md](docs/onedrive-setup.md)。使用一个仅配置为个人 Microsoft 账户的 Microsoft Entra 应用，并设置 Web 重定向 URI `https://ilist.chius.dev/api/admin/oauth/onedrive/callback` 以及委托的 Graph 权限 `User.Read` 和 `Files.ReadWrite`，然后在 `/admin/storages` 输入应用凭据。
 
-对于 Google Drive，请遵循 [docs/google-drive-setup.md](docs/google-drive-setup.md)。启用 Google Drive API，创建 Web OAuth 客户端，将重定向 URI 设置为 `https://ilist.chius.cc/api/admin/oauth/google/callback`，并在 `/admin/storages` 输入客户端 ID 和密钥。
+对于 Google Drive，请遵循 [docs/google-drive-setup.md](docs/google-drive-setup.md)。启用 Google Drive API，创建 Web OAuth 客户端，将重定向 URI 设置为 `https://ilist.chius.dev/api/admin/oauth/google/callback`，并在 `/admin/storages` 输入客户端 ID 和密钥。
 
-对于 Dropbox，请遵循 [docs/dropbox-setup.md](docs/dropbox-setup.md)。创建 scoped Dropbox 应用，注册 `https://ilist.chius.cc/api/admin/oauth/dropbox/callback`，启用文件 metadata/content 的读写四项 scope，并在 `/admin/storages` 输入应用密钥。
+对于 Dropbox，请遵循 [docs/dropbox-setup.md](docs/dropbox-setup.md)。创建 scoped Dropbox 应用，注册 `https://ilist.chius.dev/api/admin/oauth/dropbox/callback`，启用文件 metadata/content 的读写四项 scope，并在 `/admin/storages` 输入应用密钥。
 
 对于 PikPak，请遵循 [docs/pikpak-setup.md](docs/pikpak-setup.md)。账户会话按挂载加密保存，密码不会被保留。
 

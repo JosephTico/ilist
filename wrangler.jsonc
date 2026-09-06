@@ -13,7 +13,7 @@
   },
   "routes": [
     {
-      "pattern": "ilist.chius.cc",
+      "pattern": "ilist.chius.dev",
       "custom_domain": true
     }
   ],

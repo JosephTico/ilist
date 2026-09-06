@@ -14,7 +14,7 @@ ilist connects each Dropbox mount through a scoped OAuth 2.0 app. Access and ref
 4. Add the exact production redirect URI:
 
    ```text
-   https://ilist.chius.cc/api/admin/oauth/dropbox/callback
+   https://ilist.chius.dev/api/admin/oauth/dropbox/callback
    ```
 
 Keep the workers.dev callback registered until the custom-domain flow has been verified if that hostname remains in use during deployment.

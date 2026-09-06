@@ -42,7 +42,14 @@ jobs:
       - name: Type-check, build, and test
         run: npm run check
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Chromium
+        timeout-minutes: 8
         run: npx playwright install --with-deps chromium
 
       - name: Run non-visual browser tests

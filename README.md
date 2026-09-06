@@ -87,7 +87,7 @@ The Worker acts as the control plane and streams or redirects file data where po
    npx wrangler r2 bucket create ilist-r2
    ```
 
-4. **Configure `wrangler.jsonc`, the custom domain, and D1 migrations.** Copy the D1 `database_id` returned by Wrangler into `wrangler.jsonc`, confirm the database and bucket names, and keep the configured `ilist.chius.cc` custom-domain route only when that hostname is in your Cloudflare zone. Then run:
+4. **Configure `wrangler.jsonc`, the custom domain, and D1 migrations.** Copy the D1 `database_id` returned by Wrangler into `wrangler.jsonc`, confirm the database and bucket names, and keep the configured `ilist.chius.dev` custom-domain route only when that hostname is in your Cloudflare zone. Then run:
 
    ```bash
    npx wrangler d1 migrations apply ilist-d1 --remote
@@ -119,7 +119,7 @@ The Worker acts as the control plane and streams or redirects file data where po
    npx wrangler secret put PUBLIC_ORIGIN
    ```
 
-   The canonical production value is `https://ilist.chius.cc`. `PUBLIC_ORIGIN` must exactly match the deployed HTTPS origin and have no trailing slash.
+   The canonical production value is `https://ilist.chius.dev`. `PUBLIC_ORIGIN` must exactly match the deployed HTTPS origin and have no trailing slash.
 
 7. **Run `npm run check` and `npm run deploy`.**
 
@@ -134,11 +134,11 @@ The Worker acts as the control plane and streams or redirects file data where po
 
 Open `/admin/storages` after signing in. Each mount has its own display name, top-level mount path, provider and encrypted credentials, public or private visibility, enabled state, and optional provider root. Disconnecting removes account authorization while preserving reusable application/provider configuration; deleting removes the ilist mount and all of its stored credentials. Neither operation deletes the provider account, bucket, drive, or stored objects.
 
-For OneDrive Personal, follow [docs/onedrive-setup.md](docs/onedrive-setup.md). Use a Microsoft Entra application configured for personal Microsoft accounts only, with the Web redirect URI `https://ilist.chius.cc/api/admin/oauth/onedrive/callback` and delegated Graph permissions `User.Read` and `Files.ReadWrite`, then enter its credentials in `/admin/storages`.
+For OneDrive Personal, follow [docs/onedrive-setup.md](docs/onedrive-setup.md). Use a Microsoft Entra application configured for personal Microsoft accounts only, with the Web redirect URI `https://ilist.chius.dev/api/admin/oauth/onedrive/callback` and delegated Graph permissions `User.Read` and `Files.ReadWrite`, then enter its credentials in `/admin/storages`.
 
-For Google Drive, follow [docs/google-drive-setup.md](docs/google-drive-setup.md). Enable Google Drive API, create a Web OAuth client with redirect URI `https://ilist.chius.cc/api/admin/oauth/google/callback`, and enter its client ID and secret in `/admin/storages`. ilist requests `https://www.googleapis.com/auth/drive`.
+For Google Drive, follow [docs/google-drive-setup.md](docs/google-drive-setup.md). Enable Google Drive API, create a Web OAuth client with redirect URI `https://ilist.chius.dev/api/admin/oauth/google/callback`, and enter its client ID and secret in `/admin/storages`. ilist requests `https://www.googleapis.com/auth/drive`.
 
-For Dropbox, follow [docs/dropbox-setup.md](docs/dropbox-setup.md). Create a scoped Dropbox app, register `https://ilist.chius.cc/api/admin/oauth/dropbox/callback`, enable the four file metadata/content read/write scopes, and enter its app key and secret in `/admin/storages`.
+For Dropbox, follow [docs/dropbox-setup.md](docs/dropbox-setup.md). Create a scoped Dropbox app, register `https://ilist.chius.dev/api/admin/oauth/dropbox/callback`, enable the four file metadata/content read/write scopes, and enter its app key and secret in `/admin/storages`.
 
 For Cloudflare R2 through S3, use:
 

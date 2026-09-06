@@ -10,3 +10,4 @@ test-results/
 src/worker/env.d.ts
 .superpowers/
 .worktrees/
+.DS_Store

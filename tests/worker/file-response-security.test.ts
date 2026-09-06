@@ -177,7 +177,7 @@ describe('withApplicationSecurityHeaders', () => {
   it('applies the application policy and preserves application headers', () => {
     const response = withApplicationSecurityHeaders(
       new Response('{}', { headers: { 'content-type': 'application/json', 'set-cookie': 'session=value' } }),
-      new Request('https://ilist.chius.cc/api/admin/login'),
+      new Request('https://ilist.chius.dev/api/admin/login'),
     );
 
     expect(response.headers.get('content-security-policy')).toBe(APP_CSP);
