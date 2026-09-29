@@ -35,6 +35,8 @@ export interface Entry {
   description: string;
   mountPath: string | null;
   exportOptions?: FileExportOption[];
+  /** Id of a `folder.png` inside this folder; shown as the folder's grid icon. */
+  iconFileId?: string;
   capabilities: EntryCapabilities;
 }
 

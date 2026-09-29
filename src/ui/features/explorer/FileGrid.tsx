@@ -1,9 +1,24 @@
 import { Download, MoreHorizontal } from 'lucide-react';
-import type { HTMLAttributes } from 'react';
+import { useState, type HTMLAttributes } from 'react';
+import { fileUrl } from '../../api/entries';
 import { isEntryMutable, type Entry } from '../../types/entries';
 import { useI18n } from '../../i18n/I18nProvider';
+import { isPreviewableImage } from '../preview/preview-kind';
 import { FileIcon } from './FileIcon';
 import type { EntryHandlers } from './EntryRow';
+
+/** Shows the real file (or a folder's `folder.png`) unprocessed; falls back to the icon if it fails to load. */
+function GridMedia({ entry, thumbnailSrc }: { entry: Entry; thumbnailSrc: string | null }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const showImage = thumbnailSrc !== null && failedSrc !== thumbnailSrc;
+  return (
+    <span className={`gridMedia ${entry.kind}${showImage ? ' hasThumbnail' : ''}`}>
+      {showImage
+        ? <img className="gridThumbnail" src={thumbnailSrc} alt="" loading="lazy" decoding="async" onError={() => setFailedSrc(thumbnailSrc)} />
+        : <span className={`gridIcon ${entry.kind}`}><FileIcon entry={entry} size={34} /></span>}
+    </span>
+  );
+}
 
 export function FileGrid({
   entries,
@@ -61,7 +76,12 @@ export function FileGrid({
               else if (entry.kind === 'folder') handlers.onOpen(entry);
               else handlers.onPreview(entry);
             }}>
-              <span className={`gridMedia ${entry.kind}`}><span className={`gridIcon ${entry.kind}`}><FileIcon entry={entry} size={34} /></span></span>
+              <GridMedia
+                entry={entry}
+                thumbnailSrc={entry.kind === 'folder'
+                  ? entry.iconFileId ? fileUrl({ id: entry.iconFileId, name: 'folder.png' }) : null
+                  : entry.capabilities.download && isPreviewableImage(entry) ? fileUrlFor(entry, false) : null}
+              />
               <span className="gridFooter">
                 <strong title={entry.name}>{entry.name}</strong>
                 <small>{entry.kind === 'folder' ? t('entry.folder') : formatBytes(entry.size)}</small>
