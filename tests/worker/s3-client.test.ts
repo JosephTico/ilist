@@ -485,3 +485,37 @@ describe('S3Client multipart requests', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+describe('S3Client default fetch', () => {
+  it('invokes the global fetch with globalThis as receiver, as Workers require', async () => {
+    // Workers throw "Illegal invocation" when fetch runs with any receiver other than globalThis.
+    const stub = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return Promise.resolve(new Response(
+        `<?xml version="1.0" encoding="UTF-8"?>
+        <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+          <Name>archive</Name>
+          <Prefix></Prefix>
+          <KeyCount>0</KeyCount>
+          <MaxKeys>1000</MaxKeys>
+          <IsTruncated>false</IsTruncated>
+        </ListBucketResult>`,
+      ));
+    });
+    vi.stubGlobal('fetch', stub);
+    try {
+      const client = new S3Client({
+        endpoint: 'https://objects.example.test/storage',
+        region: 'auto',
+        bucket: 'archive',
+        addressingStyle: 'path',
+        credentials,
+      });
+
+      await expect(client.listObjectsV2({})).resolves.toBeDefined();
+      expect(stub).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
