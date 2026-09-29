@@ -73,6 +73,33 @@ function encodedMountPath(mount: Mount): string {
   return `/${encodeURIComponent(mount.mountPath.slice(1))}`;
 }
 
+const FOLDER_ICON_NAME = 'folder.png';
+// Stay well under the 50-subrequest Workers Free limit; folders beyond the cap keep the default icon.
+const MAX_FOLDER_ICON_PROBES = 40;
+const FOLDER_ICON_CONCURRENCY = 8;
+
+/** Best-effort lookup of `folder.png` in each folder; failures only cost the custom icon. */
+async function findFolderIcons(driver: StorageDriver, mount: Mount, folders: StorageItem[]): Promise<Map<string, string>> {
+  const icons = new Map<string, string>();
+  if (!driver.resolveFile) return icons;
+  const resolveFile = driver.resolveFile.bind(driver);
+  const queue = folders.slice(0, MAX_FOLDER_ICON_PROBES);
+  let next = 0;
+  const worker = async () => {
+    while (next < queue.length) {
+      const folder = queue[next++]!;
+      try {
+        const icon = await resolveFile(folder.id, FOLDER_ICON_NAME);
+        if (icon) icons.set(folder.id, encodeExternalId(mount.id, icon.id));
+      } catch (error) {
+        console.warn('Folder icon lookup failed', { mountId: mount.id, error: error instanceof Error ? error.name : 'unknown' });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(FOLDER_ICON_CONCURRENCY, queue.length) }, worker));
+  return icons;
+}
+
 export async function listExternalDirectory(
   env: Env,
   mount: Mount,
@@ -103,12 +130,16 @@ export async function listExternalDirectory(
   }
 
   if (current.kind !== 'folder') throw new HttpError(400, 'NOT_A_FOLDER', 'Entry is not a folder');
+  const children = (await listAll(driver, current.id)).filter((entry) => matchesNameFilter(entry.name, nameFilter));
+  const icons = await findFolderIcons(driver, mount, children.filter((entry) => entry.kind === 'folder'));
   return {
     current: externalEntry(current, mount, driver, admin),
     breadcrumbs,
-    items: (await listAll(driver, current.id))
-      .filter((entry) => matchesNameFilter(entry.name, nameFilter))
-      .map((entry) => externalEntry(entry, mount, driver, admin)),
+    items: children.map((entry) => {
+      const mapped = externalEntry(entry, mount, driver, admin);
+      const iconFileId = icons.get(entry.id);
+      return iconFileId ? { ...mapped, iconFileId } : mapped;
+    }),
   };
 }
 
@@ -130,6 +161,23 @@ export async function resolveExternalEntry(env: Env, id: string, admin: boolean)
   const driver = await createDriver(env, mount);
   const item = await driver.stat(identity.itemId);
   return { identity, mount, driver, item, entry: externalEntry(item, mount, driver, admin) };
+}
+
+/** Resolves `path` (relative to the entry's folder, `/`-prefixed = mount root) inside the same mount. */
+export async function resolveRelativeExternalEntry(
+  base: ResolvedExternalEntry,
+  path: string,
+  admin: boolean,
+): Promise<ResolvedExternalEntry> {
+  const item = path.length <= 2048 && base.driver.resolveFile ? await base.driver.resolveFile(base.item.id, path) : null;
+  if (!item) throw new HttpError(404, 'ENTRY_NOT_FOUND', 'Entry not found');
+  return {
+    identity: { mountId: base.identity.mountId, itemId: item.id },
+    mount: base.mount,
+    driver: base.driver,
+    item,
+    entry: externalEntry(item, base.mount, base.driver, admin),
+  };
 }
 
 export function requireExternalCapability(driver: StorageDriver, capability: Parameters<StorageDriver['capabilities']['has']>[0]): void {

@@ -172,6 +172,8 @@ export interface Entry {
   description: string;
   mountPath: string | null;
   exportOptions?: FileExportOption[];
+  /** Encoded entry id of a `folder.png` inside this folder, when one exists. */
+  iconFileId?: string;
   capabilities: EntryCapabilities;
 }
 

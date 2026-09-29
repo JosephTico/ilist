@@ -85,6 +85,12 @@ export interface StorageDriver {
   list(parentId: string, cursor?: string): Promise<ListResult>;
   stat(itemId: string): Promise<StorageItem>;
   isWithin(itemId: string, ancestorId: string): Promise<boolean>;
+  /**
+   * Optional. Resolves a slash-separated path to an existing file, relative to the folder `fromId`
+   * (or the containing folder when `fromId` is a file; a leading `/` means the mount root).
+   * `..` may not escape the mount root. Returns null when nothing matches.
+   */
+  resolveFile?(fromId: string, path: string): Promise<StorageItem | null>;
   getDownload(itemId: string, request: Request): Promise<DownloadResult>;
   createFolder(parentId: string, name: string): Promise<StorageItem>;
   upload(parentId: string, name: string, body: ReadableStream, contentType: string | null): Promise<StorageItem>;

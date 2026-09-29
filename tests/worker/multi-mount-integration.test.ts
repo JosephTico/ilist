@@ -2,7 +2,7 @@ import { SELF, env } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { driverRegistry } from '../../src/worker/drivers/registry';
 import type { StorageDriver, StorageItem } from '../../src/worker/drivers/types';
-import { decodeExternalId } from '../../src/worker/external-identity';
+import { decodeExternalId, encodeExternalId } from '../../src/worker/external-identity';
 import { createMount } from '../../src/worker/mounts';
 import type { Env } from '../../src/worker/types';
 
@@ -430,5 +430,104 @@ describe('multi-mount filesystem integration', () => {
     const legacy = await SELF.fetch(`${origin}/file/${legacyKey}`, { redirect: 'manual' });
     expect(legacy.status).toBe(302);
     expect(legacy.headers.get('location')).toBe(`/file/${legacyId}/legacy.txt`);
+  });
+});
+
+describe('folder icons and relative file resolution', () => {
+  async function mountWith(driver: StorageDriver, path: string) {
+    const db = (env as unknown as Env).DB;
+    await db.prepare("DELETE FROM mounts WHERE id <> 'native-r2'").run();
+    const mounted = await createMount(db, {
+      name: 'Assets', mountPath: path, driverType: 'dropbox', provider: 'dropbox', isPublic: true,
+    });
+    driverRegistry.dropbox = () => driver;
+    return mounted;
+  }
+
+  it('links a folder to its folder.png and leaves other folders and files alone', async () => {
+    const base = fakeDriver('icons');
+    const entries = [
+      item({ id: 'folder-with-icon', parentId: 'root', name: 'Has icon', kind: 'folder' }),
+      item({ id: 'folder-plain', parentId: 'root', name: 'Plain', kind: 'folder' }),
+      item({ id: 'file-1', parentId: 'root', name: 'a.png', kind: 'file', contentType: null }),
+    ];
+    const resolveFile = vi.fn(async (fromId: string, path: string) =>
+      fromId === 'folder-with-icon' && path === 'folder.png'
+        ? item({ id: 'icon-file', parentId: fromId, name: 'folder.png', kind: 'file', contentType: 'image/png' })
+        : null);
+    const driver: StorageDriver = { ...base, list: vi.fn(async () => ({ items: entries, nextCursor: null })), resolveFile };
+    const mounted = await mountWith(driver, '/icons');
+
+    const response = await SELF.fetch(`${origin}/api/fs/list?path=/icons`);
+
+    expect(response.status).toBe(200);
+    const items = (await response.json() as { data: { items: Array<{ name: string; iconFileId?: string }> } }).data.items;
+    const byName = Object.fromEntries(items.map((entry) => [entry.name, entry]));
+    expect(decodeExternalId(byName['Has icon']!.iconFileId!)).toEqual({ mountId: mounted.id, itemId: 'icon-file' });
+    expect(byName.Plain).not.toHaveProperty('iconFileId');
+    expect(byName['a.png']).not.toHaveProperty('iconFileId');
+    expect(resolveFile.mock.calls.map(([fromId]) => fromId).sort()).toEqual(['folder-plain', 'folder-with-icon']);
+  });
+
+  it('still lists the directory when a folder icon lookup fails', async () => {
+    const base = fakeDriver('icons-broken');
+    const driver: StorageDriver = {
+      ...base,
+      list: vi.fn(async () => ({ items: [item({ id: 'folder-1', parentId: 'root', name: 'Docs', kind: 'folder' })], nextCursor: null })),
+      resolveFile: vi.fn(async () => { throw new Error('storage unavailable'); }),
+    };
+    await mountWith(driver, '/icons-broken');
+
+    const response = await SELF.fetch(`${origin}/api/fs/list?path=/icons-broken`);
+
+    expect(response.status).toBe(200);
+    const items = (await response.json() as { data: { items: Array<{ name: string }> } }).data.items;
+    expect(items.map((entry) => entry.name)).toEqual(['Docs']);
+  });
+
+  it('serves a file addressed relative to another entry through ?rel=', async () => {
+    const base = fakeDriver('rel');
+    const markdown = item({ id: 'notes-md', parentId: 'root', name: 'notes.md', kind: 'file', contentType: 'text/markdown' });
+    const image = item({ id: 'img-a', parentId: 'root', name: 'a.png', kind: 'file', contentType: 'image/png' });
+    const resolveFile = vi.fn(async (_fromId: string, path: string) => (path === 'img/a.png' ? image : null));
+    const getDownload = vi.fn(async () => ({
+      kind: 'stream' as const,
+      response: new Response('image-bytes', { headers: { 'content-type': 'image/png' } }),
+    }));
+    const driver: StorageDriver = {
+      ...base,
+      stat: vi.fn(async (id: string) => {
+        if (id === markdown.id) return markdown;
+        throw new Error('unexpected stat');
+      }),
+      resolveFile,
+      getDownload,
+    };
+    const mounted = await mountWith(driver, '/rel');
+    const markdownId = encodeExternalId(mounted.id, markdown.id);
+
+    const found = await SELF.fetch(`${origin}/file/${encodeURIComponent(markdownId)}/notes.md?rel=${encodeURIComponent('img/a.png')}`);
+    const missing = await SELF.fetch(`${origin}/file/${encodeURIComponent(markdownId)}/notes.md?rel=${encodeURIComponent('img/nope.png')}`);
+
+    expect(found.status).toBe(200);
+    expect(found.headers.get('content-type')).toBe('image/png');
+    expect(found.headers.get('content-disposition')).toMatch(/^inline;/);
+    await expect(found.text()).resolves.toBe('image-bytes');
+    expect(resolveFile).toHaveBeenCalledWith(markdown.id, 'img/a.png');
+    expect(getDownload).toHaveBeenCalledWith(image.id, expect.any(Request));
+    expect(missing.status).toBe(404);
+  });
+
+  it('refuses ?rel= on drivers that cannot resolve paths instead of serving the base file', async () => {
+    const base = fakeDriver('no-rel');
+    const markdown = item({ id: 'notes-md', parentId: 'root', name: 'notes.md', kind: 'file' });
+    const driver: StorageDriver = { ...base, stat: vi.fn(async () => markdown) };
+    const mounted = await mountWith(driver, '/no-rel');
+
+    const response = await SELF.fetch(
+      `${origin}/file/${encodeURIComponent(encodeExternalId(mounted.id, markdown.id))}/notes.md?rel=${encodeURIComponent('a.png')}`,
+    );
+
+    expect(response.status).toBe(404);
   });
 });

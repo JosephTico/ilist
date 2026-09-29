@@ -443,3 +443,63 @@ describe('S3Driver', () => {
     expect(api.uploadPart).not.toHaveBeenCalled();
   });
 });
+
+describe('S3Driver.resolveFile', () => {
+  function driverWithKeys(keys: string[], failure?: S3Error) {
+    const api = client({
+      headObject: vi.fn(async (key: string) => {
+        if (failure) throw failure;
+        if (keys.includes(key)) return response({ 'content-type': 'image/png', 'content-length': '5' });
+        throw new S3Error(404, 'NoSuchKey', 'not found');
+      }),
+    });
+    return { api, driver: new S3Driver(mount, api) };
+  }
+
+  it('resolves relative to a file, upward with .., and from the mount root with a leading slash', async () => {
+    const { driver } = driverWithKeys([
+      'tenant/root/docs/guide/img/a.png',
+      'tenant/root/docs/shared.png',
+      'tenant/root/top.png',
+    ]);
+    const readme = driver.itemId('tenant/root/docs/guide/readme.md', 'file');
+
+    await expect(driver.resolveFile(readme, 'img/a.png')).resolves.toMatchObject({ name: 'a.png', contentType: 'image/png' });
+    await expect(driver.resolveFile(readme, './img/a.png')).resolves.toMatchObject({ name: 'a.png' });
+    await expect(driver.resolveFile(readme, '../shared.png')).resolves.toMatchObject({ name: 'shared.png' });
+    await expect(driver.resolveFile(readme, '/top.png')).resolves.toMatchObject({ name: 'top.png' });
+  });
+
+  it('resolves relative to a folder itself', async () => {
+    const { driver, api } = driverWithKeys(['tenant/root/cards/folder.png']);
+
+    await expect(driver.resolveFile(driver.itemId('tenant/root/cards/', 'folder'), 'folder.png')).resolves.toMatchObject({ name: 'folder.png' });
+    expect(api.headObject).toHaveBeenCalledWith('tenant/root/cards/folder.png');
+  });
+
+  it('never resolves above the configured mount root', async () => {
+    const { driver, api } = driverWithKeys(['tenant/secret.png', 'tenant/root/inside.png']);
+    const readme = driver.itemId('tenant/root/readme.md', 'file');
+
+    await expect(driver.resolveFile(readme, '../secret.png')).resolves.toBeNull();
+    await expect(driver.resolveFile(readme, '../../root/inside.png')).resolves.toBeNull();
+    await expect(driver.resolveFile(readme, '/../secret.png')).resolves.toBeNull();
+    expect(api.headObject).not.toHaveBeenCalled();
+  });
+
+  it.each(['', 'img/', '..', 'a\\b.png', 'bad\u0000.png'])('rejects unusable path %j without a lookup', async (path) => {
+    const { driver, api } = driverWithKeys([]);
+
+    await expect(driver.resolveFile(driver.itemId('tenant/root/docs/readme.md', 'file'), path)).resolves.toBeNull();
+    expect(api.headObject).not.toHaveBeenCalled();
+  });
+
+  it('returns null for a missing file but surfaces other storage errors', async () => {
+    const missing = driverWithKeys([]);
+    const readme = missing.driver.itemId('tenant/root/readme.md', 'file');
+    await expect(missing.driver.resolveFile(readme, 'nope.png')).resolves.toBeNull();
+
+    const broken = driverWithKeys([], new S3Error(500, 'InternalError', 'boom'));
+    await expect(broken.driver.resolveFile(broken.driver.itemId('tenant/root/readme.md', 'file'), 'a.png')).rejects.toMatchObject({ status: 500 });
+  });
+});

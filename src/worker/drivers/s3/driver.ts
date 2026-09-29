@@ -236,6 +236,29 @@ export class S3Driver implements StorageDriver {
     }
   }
 
+  async resolveFile(fromId: string, path: string): Promise<StorageItem | null> {
+    if (!path || path.endsWith('/') || path.includes('\\') || /[\u0000-\u001f]/.test(path)) return null;
+    const from = this.decodeItemId(fromId);
+    const base = path.startsWith('/') ? this.rootPrefix : from.kind === 'folder' ? from.key : parentPrefix(from.key);
+    const parts = base.slice(this.rootPrefix.length).split('/').filter(Boolean);
+    for (const segment of path.split('/')) {
+      if (segment === '' || segment === '.') continue;
+      if (segment === '..') {
+        if (!parts.length) return null;
+        parts.pop();
+      } else {
+        parts.push(segment);
+      }
+    }
+    if (!parts.length) return null;
+    try {
+      return await this.stat(this.itemId(`${this.rootPrefix}${parts.join('/')}`, 'file'));
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
   async isWithin(itemId: string, ancestorId: string): Promise<boolean> {
     try {
       if (itemId === ancestorId) {

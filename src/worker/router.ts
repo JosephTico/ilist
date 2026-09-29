@@ -34,7 +34,7 @@ import {
 } from './db';
 import { entryToApi, isEffectivelyPublic } from './entries';
 import { validateEntryName } from './entry-domain';
-import { externalEntry, requireExternalCapability, resolveExternalEntry } from './external-entries';
+import { externalEntry, requireExternalCapability, resolveExternalEntry, resolveRelativeExternalEntry } from './external-entries';
 import { decodeExternalId } from './external-identity';
 import { secureFileResponse } from './file-response-security';
 import {
@@ -627,7 +627,12 @@ async function handleFile(request: Request, env: Env, url: URL): Promise<Respons
   }
   const [candidateId] = suffix.split('/');
   const admin = Boolean(await currentUser(env, request));
-  const external = await resolveExternalEntry(env, candidateId, admin);
+  const resolvedExternal = await resolveExternalEntry(env, candidateId, admin);
+  // `?rel=` serves a file addressed relative to this entry (e.g. images referenced by a Markdown file).
+  const relativePath = url.searchParams.get('rel');
+  const external = resolvedExternal && relativePath !== null
+    ? await resolveRelativeExternalEntry(resolvedExternal, relativePath, admin)
+    : resolvedExternal;
   if (external) {
     if (external.item.kind !== 'file') throw new HttpError(400, 'NOT_A_FILE', 'Entry is not a file');
     requireExternalCapability(external.driver, 'download');
