@@ -31,6 +31,9 @@ Self-hosted file index and manager for Cloudflare Workers.
 - English and Simplified Chinese interface with system, light, and dark themes stored locally
 - List and grid views, breadcrumbs, sorting, search, keyboard selection, and responsive layout
 - Responsive storage and appearance administration for desktop, tablet, and mobile screens
+- Grid thumbnails for image files (fetched unprocessed) and per-folder icons from a `folder.png`
+- Markdown preview with a rendered/source toggle; relative images and links resolve inside the same S3 storage
+- Site title and default view set once from the Appearance page for every visitor; a lone storage opens straight from the root
 - Administrator login, upload, folder creation, rename, move, delete, and visibility controls
 - Resumable OneDrive, Google Drive, and Dropbox uploads plus multipart S3 uploads with pause, resume, retry, cancel, and progress controls
 - D1 migrations and compatibility support for legacy R2 object links
@@ -152,6 +155,14 @@ Secret access key: R2 API token secret access key
 ```
 
 Use a bucket-scoped R2 API token with only the permissions ilist requires.
+
+## Appearance and Content Conventions
+
+- **Site title and default view** are site-wide and stored in the D1 `settings` table. Administrators change them on `/admin/appearance`; every visitor sees the title in the header and browser tab. The default view applies to visitors who have not picked a list or grid view themselves. Language, theme, and a visitor's own view choice stay in that browser's local storage and take precedence for that visitor.
+- **Single storage:** when the root lists exactly one storage, visiting `/` opens it directly.
+- **Thumbnails:** `png`, `jpg`, `jpeg`, `gif`, `webp`, and `avif` files show the real image in grid view, loaded lazily and never resized. Listings without a content type (S3) are recognized by extension.
+- **Folder icons:** put a file named exactly `folder.png` inside an S3 folder and its parent's grid shows it inside that folder's icon. The lookup costs one request per subfolder, is limited to 40 subfolders per listing, and is skipped for other storage types.
+- **Markdown:** `.md` and `.markdown` files preview as rendered GitHub-flavored Markdown with a Rendered/Source toggle. Raw HTML is not rendered. Relative image and link paths (`img/a.png`, `../b.png`, `/from/mount/root.png`) resolve inside the same S3 storage through `/file/<id>/<name>?rel=<path>` and never above the mount root. Shared links show the alt text instead of relative images.
 
 ## Upload Behavior
 
