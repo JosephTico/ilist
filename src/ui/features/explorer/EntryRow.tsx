@@ -1,7 +1,7 @@
 import { Download, MoreHorizontal } from 'lucide-react';
 import { isEntryMutable, type Entry } from '../../types/entries';
 import { useI18n } from '../../i18n/I18nProvider';
-import { FileIcon } from './FileIcon';
+import { EntryVisual, entryThumbnailSrc } from './EntryMedia';
 
 export interface EntryHandlers {
   onOpen: (entry: Entry) => void;
@@ -60,7 +60,7 @@ export function EntryRow({
         if (selectable && (event.metaKey || event.ctrlKey || event.shiftKey)) onToggle(entry, { range: event.shiftKey });
         else activate();
       }} aria-label={openLabel}>
-        <span className={`entryIcon ${isFolder ? 'folder' : 'file'}`}><FileIcon entry={entry} size={18} /></span>
+        <span className="entryMedia"><EntryVisual entry={entry} src={entryThumbnailSrc(entry, fileUrlFor)} variant="row" /></span>
         <span className="entryName">
           <strong title={entry.name}>{entry.name}</strong>
         </span>

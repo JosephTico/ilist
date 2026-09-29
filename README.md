@@ -31,7 +31,7 @@ Self-hosted file index and manager for Cloudflare Workers.
 - English and Simplified Chinese interface with system, light, and dark themes stored locally
 - List and grid views, breadcrumbs, sorting, search, keyboard selection, and responsive layout
 - Responsive storage and appearance administration for desktop, tablet, and mobile screens
-- Grid thumbnails for image files (fetched unprocessed) and per-folder icons from a `folder.png`
+- Thumbnails for image files (fetched unprocessed) and per-folder icons from a `folder.png`, in both grid and list views
 - Markdown preview with a rendered/source toggle; relative images and links resolve inside the same S3 storage
 - Site title and default view set once from the Appearance page for every visitor; a lone storage opens straight from the root
 - Administrator login, upload, folder creation, rename, move, delete, and visibility controls
@@ -165,8 +165,8 @@ Use a bucket-scoped R2 API token with only the permissions ilist requires.
 - **Header controls:** the GitHub link, the language selector, and the sign-in button can each be hidden for every visitor. Sign-in stays available at `/admin`, and a signed-in administrator always keeps the sign-out and storage settings buttons.
 - **Sharing:** the Share action is offered only for items guests cannot already reach. On storage visible to guests, items get **Copy link** instead, and so do folders (the link opens that folder in the explorer). Existing shares keep working and stay manageable at `/admin/shares`.
 - **Single storage:** when the root lists exactly one storage, visiting `/` opens it directly.
-- **Thumbnails:** `png`, `jpg`, `jpeg`, `gif`, `webp`, and `avif` files show the real image in grid view, loaded lazily and never resized. Listings without a content type (S3) are recognized by extension.
-- **Folder icons:** put a file named exactly `folder.png` inside an S3 folder and its parent's grid shows it inside that folder's icon. The lookup costs one request per subfolder, is limited to 40 subfolders per listing, and is skipped for other storage types.
+- **Thumbnails:** `png`, `jpg`, `jpeg`, `gif`, `webp`, and `avif` files show the real image in grid and list views, loaded lazily and never resized. Listings without a content type (S3) are recognized by extension.
+- **Folder icons:** put a file named exactly `folder.png` inside an S3 folder and its parent's grid and list show it inside that folder's icon. The lookup costs one request per subfolder, is limited to 40 subfolders per listing, and is skipped for other storage types.
 - **Markdown:** `.md` and `.markdown` files preview as rendered GitHub-flavored Markdown with a Rendered/Source toggle. Raw HTML is not rendered. Relative image and link paths (`img/a.png`, `../b.png`, `/from/mount/root.png`) resolve inside the same S3 storage through `/file/<id>/<name>?rel=<path>` and never above the mount root. Shared links show the alt text instead of relative images.
 
 ## Upload Behavior
