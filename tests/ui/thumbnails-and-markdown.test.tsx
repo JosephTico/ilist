@@ -75,15 +75,19 @@ describe('grid thumbnails', () => {
     expect(container.querySelector('img')).toBeNull();
   });
 
-  it('shows a folder.png as the folder icon only for folders that have one', () => {
+  it('draws every folder with the same folder shape and puts a folder.png inside it', () => {
     const { container } = renderGrid([
       entry({ id: 'folder-a', name: 'Has icon', kind: 'folder', iconFileId: 'ext_icon' }),
       entry({ id: 'folder-b', name: 'Plain', kind: 'folder' }),
     ]);
 
-    const images = container.querySelectorAll('img.gridThumbnail');
-    expect(images).toHaveLength(1);
-    expect(images[0]).toHaveAttribute('src', '/file/ext_icon/folder.png');
+    const glyphs = container.querySelectorAll('.folderGlyph');
+    expect(glyphs).toHaveLength(2);
+    for (const glyph of glyphs) expect(glyph.querySelector('svg .folderFront')).not.toBeNull();
+    expect(glyphs[0]!.querySelector('img')).toHaveAttribute('src', '/file/ext_icon/folder.png');
+    expect(glyphs[1]!.querySelector('img')).toBeNull();
+    // A folder icon is never rendered like an image file's thumbnail.
+    expect(container.querySelector('img.gridThumbnail')).toBeNull();
   });
 
   it('falls back to the icon when the image fails to load', () => {
@@ -93,6 +97,15 @@ describe('grid thumbnails', () => {
 
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelector('.gridIcon')).not.toBeNull();
+  });
+
+  it('keeps the empty folder shape when a folder.png fails to load', () => {
+    const { container } = renderGrid([entry({ id: 'folder-a', name: 'Has icon', kind: 'folder', iconFileId: 'ext_icon' })]);
+
+    fireEvent.error(container.querySelector('.folderGlyph img')!);
+
+    expect(container.querySelector('.folderGlyph img')).toBeNull();
+    expect(container.querySelector('.folderGlyph svg')).not.toBeNull();
   });
 });
 
