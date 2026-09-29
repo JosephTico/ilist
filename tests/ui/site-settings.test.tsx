@@ -74,7 +74,7 @@ describe('site title', () => {
       </AppProviders>,
     );
     const input = screen.getByRole('textbox', { name: 'Site title' });
-    const save = screen.getByRole('button', { name: 'Save title' });
+    const save = screen.getByRole('button', { name: 'Save details' });
     expect(save).toBeDisabled();
 
     await userEvent.clear(input);
@@ -82,7 +82,7 @@ describe('site title', () => {
     expect(save).toBeEnabled();
     await userEvent.click(save);
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Title saved.');
+    expect(await screen.findByRole('status')).toHaveTextContent('Details saved.');
     expect(requests.find((request) => request.method === 'PUT')).toMatchObject({ url: '/api/admin/site', body: { title: '  Card Vault ' } });
     expect(screen.getAllByText('Card Vault').length).toBeGreaterThan(0);
     expect(document.title).toBe('Card Vault');
@@ -99,9 +99,9 @@ describe('site title', () => {
     render(<AppProviders><PreferencesPage /></AppProviders>);
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Site title' }), ' Extra');
-    await userEvent.click(screen.getByRole('button', { name: 'Save title' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save details' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to save the site title.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to save the site details.');
     expect(screen.getByRole('textbox', { name: 'Site title' })).toHaveValue('iList Extra');
     expect(document.title).toBe('iList');
   });

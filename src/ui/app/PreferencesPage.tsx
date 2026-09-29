@@ -1,6 +1,6 @@
 import { RotateCcw } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
-import { isSiteView, SITE_TITLE_MAX_LENGTH, type SiteFlag } from '../api/site';
+import { isSiteView, SITE_DESCRIPTION_MAX_LENGTH, SITE_TITLE_MAX_LENGTH, SITE_URL_MAX_LENGTH, type SiteFlag } from '../api/site';
 import { useI18n } from '../i18n/I18nProvider';
 import { localizedApiError } from '../i18n/apiErrors';
 import type { MessageKey } from '../i18n/messages';
@@ -15,29 +15,39 @@ const HEADER_CONTROLS: ReadonlyArray<{ flag: SiteFlag; label: MessageKey; hint?:
   { flag: 'hideLogin', label: 'site.hideLogin', hint: 'site.hideLoginHint' },
 ];
 
+const DETAIL_FIELDS = ['title', 'description', 'imageUrl', 'faviconUrl'] as const;
+type DetailField = (typeof DETAIL_FIELDS)[number];
+
 export function PreferencesPage() {
   const { t } = useI18n();
   const { preferences, updatePreferences } = usePreferences();
   const site = useSite();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [titleStatus, setTitleStatus] = useState<{ tone: 'saved' | 'error'; message: string } | null>(null);
-  const [titleBusy, setTitleBusy] = useState(false);
+  const [drafts, setDrafts] = useState<Partial<Record<DetailField, string>>>({});
+  const [detailsStatus, setDetailsStatus] = useState<{ tone: 'saved' | 'error'; message: string } | null>(null);
+  const [detailsBusy, setDetailsBusy] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
   const [headerError, setHeaderError] = useState<string | null>(null);
-  const titleValue = draft ?? site.title;
+  const detailValue = (field: DetailField) => drafts[field] ?? site[field];
+  const changedDetails = DETAIL_FIELDS.filter((field) => drafts[field] !== undefined && drafts[field] !== site[field]);
 
-  async function submitTitle(event: FormEvent) {
+  function editDetail(field: DetailField, value: string) {
+    setDrafts((current) => ({ ...current, [field]: value }));
+    setDetailsStatus(null);
+  }
+
+  // Only the fields that changed are sent, so saving one never rewrites another.
+  async function submitDetails(event: FormEvent) {
     event.preventDefault();
-    setTitleBusy(true);
-    setTitleStatus(null);
+    setDetailsBusy(true);
+    setDetailsStatus(null);
     try {
-      await site.saveSettings({ title: titleValue });
-      setDraft(null);
-      setTitleStatus({ tone: 'saved', message: t('site.titleSaved') });
+      await site.saveSettings(Object.fromEntries(changedDetails.map((field) => [field, drafts[field]])));
+      setDrafts({});
+      setDetailsStatus({ tone: 'saved', message: t('site.titleSaved') });
     } catch (error) {
-      setTitleStatus({ tone: 'error', message: localizedApiError(error, t, 'site.titleUnableSave') });
+      setDetailsStatus({ tone: 'error', message: localizedApiError(error, t, 'site.titleUnableSave') });
     } finally {
-      setTitleBusy(false);
+      setDetailsBusy(false);
     }
   }
 
@@ -75,19 +85,26 @@ export function PreferencesPage() {
         <div><h1>{t('admin.appearanceTitle')}</h1><p>{t('admin.appearanceDescription')}</p></div>
         <button className="button" type="button" onClick={reset}><RotateCcw aria-hidden="true" size={16} />{t('preference.reset')}</button>
       </header>
-      <form className="preferencesForm" onSubmit={(event) => void submitTitle(event)}>
+      <form className="preferencesForm" onSubmit={(event) => void submitDetails(event)}>
         <label>
           <span><strong>{t('site.title')}</strong><small>{t('site.titleHint')}</small></span>
-          <input
-            aria-label={t('site.title')}
-            value={titleValue}
-            maxLength={SITE_TITLE_MAX_LENGTH}
-            onChange={(event) => { setDraft(event.target.value); setTitleStatus(null); }}
-          />
+          <input aria-label={t('site.title')} value={detailValue('title')} maxLength={SITE_TITLE_MAX_LENGTH} onChange={(event) => editDetail('title', event.target.value)} />
+        </label>
+        <label>
+          <span><strong>{t('site.description')}</strong><small>{t('site.descriptionHint')}</small></span>
+          <input aria-label={t('site.description')} value={detailValue('description')} maxLength={SITE_DESCRIPTION_MAX_LENGTH} onChange={(event) => editDetail('description', event.target.value)} />
+        </label>
+        <label>
+          <span><strong>{t('site.imageUrl')}</strong><small>{t('site.imageUrlHint')}</small></span>
+          <input aria-label={t('site.imageUrl')} value={detailValue('imageUrl')} maxLength={SITE_URL_MAX_LENGTH} placeholder="https://example.com/preview.png" onChange={(event) => editDetail('imageUrl', event.target.value)} />
+        </label>
+        <label>
+          <span><strong>{t('site.faviconUrl')}</strong><small>{t('site.faviconUrlHint')}</small></span>
+          <input aria-label={t('site.faviconUrl')} value={detailValue('faviconUrl')} maxLength={SITE_URL_MAX_LENGTH} placeholder="https://example.com/favicon.png" onChange={(event) => editDetail('faviconUrl', event.target.value)} />
         </label>
         <div className="preferencesFormActions">
-          <button className="button" type="submit" disabled={titleBusy || titleValue === site.title}>{t('site.titleSave')}</button>
-          {titleStatus ? <span className={titleStatus.tone === 'error' ? 'formError' : 'preferencesSaved'} role={titleStatus.tone === 'error' ? 'alert' : 'status'}>{titleStatus.message}</span> : null}
+          <button className="button" type="submit" disabled={detailsBusy || changedDetails.length === 0}>{t('site.titleSave')}</button>
+          {detailsStatus ? <span className={detailsStatus.tone === 'error' ? 'formError' : 'preferencesSaved'} role={detailsStatus.tone === 'error' ? 'alert' : 'status'}>{detailsStatus.message}</span> : null}
         </div>
       </form>
       <form className="preferencesForm" onSubmit={(event) => event.preventDefault()}>

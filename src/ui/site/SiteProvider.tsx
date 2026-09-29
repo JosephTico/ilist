@@ -40,6 +40,21 @@ export function SiteProvider({ children }: PropsWithChildren) {
     }
   }, [settings]);
 
+  // The server writes the icon into the served HTML; this keeps it current after an administrator changes it.
+  useEffect(() => {
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!settings.faviconUrl) {
+      link?.remove();
+      return;
+    }
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = settings.faviconUrl;
+  }, [settings.faviconUrl]);
+
   const saveSettings = useCallback(async (patch: Partial<SiteSettings>) => {
     const saved = await saveSiteSettings(patch);
     setSettings(saved);

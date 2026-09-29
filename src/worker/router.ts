@@ -57,6 +57,7 @@ import { withApplicationSecurityHeaders } from './response-security';
 import { handleShareAdminRoutes } from './share-admin-routes';
 import { handleSharePublicRoutes, type SharePublicRouteOptions } from './share-public-routes';
 import { getSiteSettings, parseSiteSettingsPatch, updateSiteSettings } from './site-settings';
+import { isDocumentRequest, withSiteMetadata } from './site-html';
 import type { BatchFailure, BatchResult, Env } from './types';
 import { handleUploadRoutes } from './upload-routes';
 
@@ -691,6 +692,34 @@ function withPrivateNoStore(response: Response): Response {
   });
 }
 
+function siteOrigin(env: Env, request: Request): string {
+  try {
+    return new URL(env.PUBLIC_ORIGIN).origin;
+  } catch {
+    return new URL(request.url).origin;
+  }
+}
+
+/**
+ * Serves a static asset. Page navigations get the configured title, description, preview image, and favicon
+ * written into the HTML itself; everything else (scripts, styles, images) passes through untouched.
+ */
+async function serveAsset(request: Request, env: Env): Promise<Response> {
+  if (!isDocumentRequest(request)) return env.ASSETS.fetch(request);
+  let settings;
+  try {
+    settings = await getSiteSettings(env.DB);
+  } catch (error) {
+    console.error('Site settings unavailable; serving the page without them', error);
+    return env.ASSETS.fetch(request);
+  }
+  // The body depends on the settings, so the bare file must never be answered with a conditional 304.
+  const headers = new Headers(request.headers);
+  headers.delete('if-none-match');
+  headers.delete('if-modified-since');
+  return withSiteMetadata(await env.ASSETS.fetch(new Request(request, { headers })), settings, siteOrigin(env, request));
+}
+
 function withAppropriateSecurityHeaders(response: Response, request: Request): Response {
   return response.headers.get('content-security-policy')?.startsWith('sandbox;')
     ? response
@@ -707,7 +736,7 @@ export async function routeRequest(request: Request, env: Env, options: RouteReq
   try {
     if (url.pathname.startsWith('/s/')) {
       const shareResponse = await handleSharePublicRoutes(request, env, url, options.passwordAuthentication);
-      return withAppropriateSecurityHeaders(withPrivateNoStore(shareResponse ?? await env.ASSETS.fetch(request)), request);
+      return withAppropriateSecurityHeaders(withPrivateNoStore(shareResponse ?? await serveAsset(request, env)), request);
     }
     if (url.pathname === '/api/site') {
       if (request.method !== 'GET') return methodNotAllowed();
@@ -726,7 +755,7 @@ export async function routeRequest(request: Request, env: Env, options: RouteReq
       return withAppropriateSecurityHeaders(await handleFile(request, env, url), request);
     }
 
-    return withApplicationSecurityHeaders(await env.ASSETS.fetch(request), request);
+    return withApplicationSecurityHeaders(await serveAsset(request, env), request);
   } catch (error) {
     if (error instanceof HttpError) {
       const response = fail(error.status, error.code, error.message, error.details);
