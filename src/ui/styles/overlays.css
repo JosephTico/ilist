@@ -162,6 +162,30 @@
 .previewAudio { align-self: center; justify-self: center; width: min(440px, calc(100% - 32px)); }
 .previewPdf { width: 100%; height: 100%; border: 0; background: var(--color-surface); }
 .previewText { min-width: 0; margin: 0; overflow: auto; padding: 20px; color: var(--color-text); font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 13px; line-height: 1.5; tab-size: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.previewMarkdownShell { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.previewModeToggle { display: flex; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--color-border); }
+.previewModeToggle button { border: 1px solid var(--color-border); border-radius: var(--radius-control); background: transparent; padding: 4px 12px; color: var(--color-muted); font-size: 13px; font-weight: 650; }
+.previewModeToggle button[aria-pressed="true"] { background: var(--color-surface-muted); color: var(--color-text); }
+.previewMarkdownScroll { min-height: 0; overflow: auto; }
+.previewMarkdown { max-width: 820px; margin: 0 auto; padding: 20px; color: var(--color-text); font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.previewMarkdown h1, .previewMarkdown h2, .previewMarkdown h3, .previewMarkdown h4 { margin: 1.4em 0 0.5em; line-height: 1.25; }
+.previewMarkdown h1 { font-size: 1.7em; border-bottom: 1px solid var(--color-border); padding-bottom: 0.3em; }
+.previewMarkdown h2 { font-size: 1.35em; border-bottom: 1px solid var(--color-border); padding-bottom: 0.3em; }
+.previewMarkdown h3 { font-size: 1.15em; }
+.previewMarkdown > :first-child { margin-top: 0; }
+.previewMarkdown p, .previewMarkdown ul, .previewMarkdown ol, .previewMarkdown blockquote, .previewMarkdown pre, .previewMarkdown table { margin: 0 0 1em; }
+.previewMarkdown ul, .previewMarkdown ol { padding-left: 1.6em; }
+.previewMarkdown a { color: var(--color-accent, currentColor); text-decoration: underline; }
+.previewMarkdown img { max-width: 100%; height: auto; }
+.previewMarkdown blockquote { border-left: 3px solid var(--color-border-strong); padding: 0 1em; color: var(--color-muted); }
+.previewMarkdown code { border-radius: 4px; background: var(--color-surface-muted); padding: 0.15em 0.35em; font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 0.9em; }
+.previewMarkdown pre { overflow: auto; border-radius: var(--radius-control); background: var(--color-surface-muted); padding: 12px 14px; }
+.previewMarkdown pre code { background: none; padding: 0; }
+.previewMarkdown table { display: block; max-width: 100%; overflow: auto; border-collapse: collapse; }
+.previewMarkdown th, .previewMarkdown td { border: 1px solid var(--color-border); padding: 6px 12px; }
+.previewMarkdown th { background: var(--color-surface-muted); }
+.previewMarkdown hr { border: 0; border-top: 1px solid var(--color-border); margin: 1.5em 0; }
+.previewMarkdownMissing { color: var(--color-muted); font-style: italic; }
 .previewStatus, .previewFallback { display: grid; align-self: center; justify-self: center; justify-items: center; gap: 10px; max-width: 440px; padding: 24px; color: var(--color-muted); text-align: center; }
 .previewStatus svg { animation: spin 0.9s linear infinite; }
 .previewError { color: var(--color-danger-text); }

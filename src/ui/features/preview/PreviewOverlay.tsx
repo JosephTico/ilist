@@ -1,10 +1,13 @@
 import { AlertCircle, Download, LoaderCircle, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { fileUrl } from '../../api/entries';
 import { useFeedbackI18n } from '../../components/ToastRegion';
 import { useModalFocus } from '../../hooks/useModalFocus';
 import type { Entry } from '../../types/entries';
-import { previewKind } from './preview-kind';
+import { isMarkdown, previewKind } from './preview-kind';
+
+// Markdown parsing is only needed for .md previews; keep it out of the main bundle.
+const MarkdownPreview = lazy(() => import('./MarkdownPreview').then((module) => ({ default: module.MarkdownPreview })));
 
 /** Must stay aligned with `TEXT_PREVIEW_MAX_BYTES` in the Worker file-response security module. */
 const TEXT_PREVIEW_MAX_BYTES = 512 * 1024;
@@ -22,7 +25,11 @@ type PreviewOverlayProps = {
   onClose: () => void;
   urlFor?: (entry: Entry, download: boolean, exportFormat?: string) => string;
   allowDownload?: boolean;
+  /** Resolves a path written in a Markdown file (relative to `entry`) to a URL; omitted where unsupported (shares). */
+  resolveRelativeUrl?: RelativeUrlFor;
 };
+
+type RelativeUrlFor = (entry: Entry, path: string) => string;
 
 async function readTextPreview(url: string, signal: AbortSignal): Promise<string> {
   const response = await fetch(url, { headers: { Range: `bytes=0-${TEXT_PREVIEW_MAX_BYTES - 1}` }, signal });
@@ -62,17 +69,25 @@ function pdfExport(entry: Entry) {
   return entry.exportOptions?.find((option) => option.format === 'pdf' || option.contentType === 'application/pdf');
 }
 
-function TextPreview({ entry, urlFor }: { entry: Entry; urlFor: PreviewUrlFor }) {
+type MarkdownMode = 'rendered' | 'source';
+
+function TextPreview({ entry, urlFor, resolveRelativeUrl }: { entry: Entry; urlFor: PreviewUrlFor; resolveRelativeUrl?: RelativeUrlFor }) {
   const { locale, t } = useFeedbackI18n();
   const url = urlFor(entry, false);
   const unavailableMessage = t('preview.unavailable');
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [mode, setMode] = useState<MarkdownMode>('rendered');
+  const resolveInEntry = useMemo(
+    () => (resolveRelativeUrl ? (path: string) => resolveRelativeUrl(entry, path) : undefined),
+    [entry, resolveRelativeUrl],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
     setText(null);
     setError(null);
+    setMode('rendered');
     if (entry.size > TEXT_PREVIEW_MAX_BYTES) {
       setError(new Error(t('preview.textTooLarge')));
       return () => controller.abort();
@@ -87,7 +102,18 @@ function TextPreview({ entry, urlFor }: { entry: Entry; urlFor: PreviewUrlFor })
 
   if (error) return <PreviewError message={error.message} entry={entry} urlFor={urlFor} allowDownload={entry.capabilities.download} />;
   if (text === null) return <PreviewLoading />;
-  return <pre className="previewText">{text}</pre>;
+  if (!isMarkdown(entry)) return <pre className="previewText">{text}</pre>;
+  return (
+    <div className="previewMarkdownShell">
+      <div className="previewModeToggle" role="group" aria-label={t('preview.viewMode')}>
+        <button type="button" aria-pressed={mode === 'rendered'} onClick={() => setMode('rendered')}>{t('preview.markdownRendered')}</button>
+        <button type="button" aria-pressed={mode === 'source'} onClick={() => setMode('source')}>{t('preview.markdownSource')}</button>
+      </div>
+      {mode === 'rendered'
+        ? <div className="previewMarkdownScroll"><Suspense fallback={<PreviewLoading />}><MarkdownPreview text={text} resolveRelativeUrl={resolveInEntry} /></Suspense></div>
+        : <pre className="previewText">{text}</pre>}
+    </div>
+  );
 }
 
 function PdfPreview({ entry, urlFor }: { entry: Entry; urlFor: PreviewUrlFor }) {
@@ -123,14 +149,14 @@ function PreviewError({ message, entry, urlFor = fileUrl, allowDownload = true }
   );
 }
 
-function PreviewBody({ entry, urlFor }: { entry: Entry; urlFor: PreviewUrlFor }) {
+function PreviewBody({ entry, urlFor, resolveRelativeUrl }: { entry: Entry; urlFor: PreviewUrlFor; resolveRelativeUrl?: RelativeUrlFor }) {
   const { formatBytes, t } = useFeedbackI18n();
   const url = urlFor(entry, false);
   switch (previewKind(entry)) {
     case 'image': return <img className="previewImage" src={url} alt={entry.name} />;
     case 'video': return <video className="previewVideo" controls src={url}>{t('preview.videoFallback')}</video>;
     case 'audio': return <audio className="previewAudio" controls src={url}>{t('preview.audioFallback')}</audio>;
-    case 'text': return <TextPreview entry={entry} urlFor={urlFor} />;
+    case 'text': return <TextPreview entry={entry} urlFor={urlFor} resolveRelativeUrl={resolveRelativeUrl} />;
     case 'pdf': return <PdfPreview entry={entry} urlFor={urlFor} />;
     case 'fallback': return (
       <div className="previewFallback">
@@ -144,7 +170,7 @@ function PreviewBody({ entry, urlFor }: { entry: Entry; urlFor: PreviewUrlFor })
   }
 }
 
-export function PreviewOverlay({ entry = null, loading = false, error = null, onClose, urlFor = fileUrl, allowDownload = entry?.capabilities.download ?? true }: PreviewOverlayProps) {
+export function PreviewOverlay({ entry = null, loading = false, error = null, onClose, urlFor = fileUrl, allowDownload = entry?.capabilities.download ?? true, resolveRelativeUrl }: PreviewOverlayProps) {
   const { t } = useFeedbackI18n();
   const exportOption = entry ? pdfExport(entry) ?? entry.exportOptions?.[0] : undefined;
   const downloadLabel = entry && exportOption ? t('action.exportNamed', { format: exportOption.label, name: entry.name }) : entry ? `${t('action.download')} ${entry.name}` : '';
@@ -165,7 +191,7 @@ export function PreviewOverlay({ entry = null, loading = false, error = null, on
         <div className="previewBody">
           {loading ? <PreviewLoading /> : null}
           {error ? <PreviewError message={error.message} entry={entry} urlFor={urlFor} allowDownload={allowDownload} /> : null}
-          {!loading && !error && entry ? <PreviewBody entry={entry} urlFor={urlFor} /> : null}
+          {!loading && !error && entry ? <PreviewBody entry={entry} urlFor={urlFor} resolveRelativeUrl={resolveRelativeUrl} /> : null}
         </div>
       </section>
     </div>

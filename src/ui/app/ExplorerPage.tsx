@@ -1,6 +1,6 @@
 import { AlertCircle, LoaderCircle, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import { copyEntries, createFolder, deleteEntries, entryPath, getEntry, moveEntries, patchEntry, setVisibility } from '../api/entries';
+import { copyEntries, createFolder, deleteEntries, entryPath, getEntry, moveEntries, patchEntry, relativeFileUrl, setVisibility } from '../api/entries';
 import { ToastRegion, type ToastMessage, type ToastTone } from '../components/ToastRegion';
 import { EmptyState } from '../features/explorer/EmptyState';
 import { entryActions, EntryActionMenu, type EntryActionId } from '../features/explorer/EntryActionMenu';
@@ -317,7 +317,7 @@ export function ExplorerPage({
         scheduleDeferredFeedback(() => { pushToast('success', t('feedback.propertiesSaved')); });
       }} /> : null}
       {dialog?.type === 'share' ? <ShareDialog entry={dialog.entries[0]} busy={operationPending} error={shareError} onClose={() => { setDialog(null); setShareError(null); }} onCreate={async (input) => { setOperationPending(true); setShareError(null); try { return await createShare(input); } catch (error) { setShareError(localizedApiError(error, t, 'share.unableSave')); throw error; } finally { setOperationPending(false); } }} /> : null}
-      {previewId ? <PreviewOverlay entry={previewEntry} loading={previewLoading} error={previewError} onClose={onClosePreview} /> : null}
+      {previewId ? <PreviewOverlay entry={previewEntry} loading={previewLoading} error={previewError} onClose={onClosePreview} resolveRelativeUrl={relativeFileUrl} /> : null}
     </>
   );
 }

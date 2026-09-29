@@ -51,6 +51,11 @@ export function fileUrl(
   return suffix ? `${url}?${suffix}` : url;
 }
 
+/** URL that serves the file at `path`, resolved relative to `entry`'s folder (or the mount root for `/path`). */
+export function relativeFileUrl(entry: Pick<Entry, 'id' | 'name'>, path: string): string {
+  return `${fileUrl(entry)}?rel=${encodeURIComponent(path)}`;
+}
+
 export function childPath(parentPath: string, name: string): string {
   const base = parentPath === '/' ? '' : parentPath.replace(/\/$/, '');
   return `${base}/${encodeURIComponent(name)}`;
