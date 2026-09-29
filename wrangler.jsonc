@@ -1,49 +1,53 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "ilist",
-  "main": "src/worker/index.ts",
-  "compatibility_date": "2026-07-03",
-  "workers_dev": true,
-  "preview_urls": false,
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/file/*", "/s/*"]
-  },
-  "routes": [
-    {
-      "pattern": "ilist.chius.dev",
-      "custom_domain": true
-    }
-  ],
-  "vars": {
-    "ADMIN_USERNAME": "admin",
-    "SESSION_TTL_SECONDS": "604800"
-  },
-  "secrets": {
-    "required": [
-      "ADMIN_PASSWORD_HASH",
-      "CREDENTIAL_MASTER_KEY",
-      "SESSION_SECRET",
-      "PUBLIC_ORIGIN"
-    ]
-  },
-  "r2_buckets": [
-    {
-      "binding": "R2_BUCKET",
-      "bucket_name": "ilist-r2"
-    }
-  ],
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "ilist-d1",
-      "database_id": "a64f3be9-1470-4ad2-9cff-bc653d3ec2d0",
-      "migrations_dir": "migrations"
-    }
-  ],
-  "observability": {
-    "enabled": true
-  }
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "ilist",
+	"main": "src/worker/index.ts",
+	"compatibility_date": "2026-07-03",
+	"workers_dev": false,
+	"preview_urls": false,
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*",
+			"/file/*",
+			"/s/*"
+		]
+	},
+	"routes": [
+		{
+			"pattern": "ptcgp.centropkmn.com",
+			"custom_domain": true
+		}
+	],
+	"vars": {
+		"ADMIN_USERNAME": "admin",
+		"SESSION_TTL_SECONDS": "604800"
+	},
+	"secrets": {
+		"required": [
+			"ADMIN_PASSWORD_HASH",
+			"CREDENTIAL_MASTER_KEY",
+			"SESSION_SECRET",
+			"PUBLIC_ORIGIN"
+		]
+	},
+	"r2_buckets": [
+		{
+			"binding": "R2_BUCKET",
+			"bucket_name": "ilist-r2"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "ilist-d1",
+			"database_id": "1425f0fe-3285-4336-9637-207c4ebc9fed",
+			"migrations_dir": "migrations"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
 }
