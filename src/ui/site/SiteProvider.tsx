@@ -11,12 +11,17 @@ interface SiteContextValue extends SiteSettings {
 const SiteContext = createContext<SiteContextValue | null>(null);
 
 function readCachedSettings(): SiteSettings {
+  let cached = DEFAULT_SITE_SETTINGS;
   try {
     const value = JSON.parse(window.localStorage.getItem(SITE_SETTINGS_CACHE_KEY) ?? 'null') as Partial<SiteSettings> | null;
-    return parseSiteSettings(value) ?? DEFAULT_SITE_SETTINGS;
+    cached = parseSiteSettings(value) ?? DEFAULT_SITE_SETTINGS;
   } catch {
-    return DEFAULT_SITE_SETTINGS;
+    // Unreadable or unavailable storage: fall back to the defaults.
   }
+  // The Worker writes the current title into the served HTML, which is newer than any cache; the static
+  // fallback title in index.html is not, so it is ignored.
+  const servedTitle = document.title;
+  return servedTitle && servedTitle !== DEFAULT_SITE_SETTINGS.title ? { ...cached, title: servedTitle } : cached;
 }
 
 export function SiteProvider({ children }: PropsWithChildren) {
