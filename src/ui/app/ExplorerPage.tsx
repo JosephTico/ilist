@@ -244,7 +244,7 @@ export function ExplorerPage({
     if (action === 'publish' || action === 'hide') void runBatch(() => setVisibility([entry.id], action === 'publish'));
   }
 
-  const currentEntryActions = menu ? entryActions(menu.entry, { onOpen: handlers.onOpen, onPreview: handlers.onPreview, onAction: openEntryAction, onCopyFailure: () => pushToast('error', t('feedback.copyFailed')), canShare: admin }) : [];
+  const currentEntryActions = menu ? entryActions(menu.entry, { onOpen: handlers.onOpen, onPreview: handlers.onPreview, onAction: openEntryAction, onCopyFailure: () => pushToast('error', t('feedback.copyFailed')), canShare: admin, folderLinkFor: (entry) => entryPath(path, entry) }) : [];
 
   return (
     <>

@@ -26,11 +26,18 @@ export function entryActions(entry: Entry, handlers: {
   onCopyFailure?: () => void;
   canShare?: boolean;
   fileUrlFor?: (entry: Entry, download: boolean, exportFormat?: string) => string;
+  /** URL that opens a folder in the explorer; enables Copy link on folders that guests can reach. */
+  folderLinkFor?: (entry: Entry) => string;
 }): EntryAction[] {
   const urlFor = handlers.fileUrlFor ?? fileUrl;
   const actions: EntryAction[] = [entry.kind === 'folder'
     ? { id: 'open', labelKey: 'action.open', icon: FolderInput, onSelect: () => handlers.onOpen(entry) }
     : { id: 'preview', labelKey: 'action.preview', icon: Eye, onSelect: () => handlers.onPreview(entry) }];
+  const copyLink = (link: string) => {
+    const write = navigator.clipboard?.writeText(new URL(link, window.location.origin).toString());
+    if (!write) handlers.onCopyFailure?.();
+    else void write.catch(() => handlers.onCopyFailure?.());
+  };
   if (entry.capabilities.download) {
     const exportOptions = entry.exportOptions ?? [];
     if (exportOptions.length) {
@@ -46,13 +53,15 @@ export function entryActions(entry: Entry, handlers: {
       actions.push({ id: 'download', labelKey: 'action.download', icon: Download, href: urlFor(entry, true), onSelect: () => undefined });
     }
     const copyExport = exportOptions.find((option) => option.format === 'pdf') ?? exportOptions[0];
-    actions.push({ id: 'copy', labelKey: 'action.copyLink', icon: Copy, onSelect: () => {
-      const write = navigator.clipboard?.writeText(new URL(urlFor(entry, false, copyExport?.format), window.location.origin).toString());
-      if (!write) handlers.onCopyFailure?.();
-      else void write.catch(() => handlers.onCopyFailure?.());
-    } });
+    actions.push({ id: 'copy', labelKey: 'action.copyLink', icon: Copy, onSelect: () => copyLink(urlFor(entry, false, copyExport?.format)) });
   }
-  if (handlers.canShare) actions.push({ id: 'share', labelKey: 'action.share', icon: Share2, onSelect: () => handlers.onAction('share', entry) });
+  // A folder is a link target only where guests can open it; elsewhere it has to be shared.
+  if (entry.kind === 'folder' && entry.effectivePublic && handlers.folderLinkFor) {
+    const folderLinkFor = handlers.folderLinkFor;
+    actions.push({ id: 'copy', labelKey: 'action.copyLink', icon: Copy, onSelect: () => copyLink(folderLinkFor(entry)) });
+  }
+  // Anything guests can already open is linked directly; Share is for content that is otherwise private.
+  if (handlers.canShare && !entry.effectivePublic) actions.push({ id: 'share', labelKey: 'action.share', icon: Share2, onSelect: () => handlers.onAction('share', entry) });
   if (entry.capabilities.rename) actions.push({ id: 'rename', labelKey: 'action.rename', icon: Pencil, onSelect: () => handlers.onAction('rename', entry) });
   if (entry.capabilities.move) actions.push({ id: 'move', labelKey: 'action.move', icon: FolderInput, onSelect: () => handlers.onAction('move', entry) });
   if (entry.capabilities.copy) actions.push({ id: 'copyTo', labelKey: 'action.copyTo', icon: CopyPlus, onSelect: () => handlers.onAction('copyTo', entry) });
