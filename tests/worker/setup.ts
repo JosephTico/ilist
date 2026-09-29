@@ -19,6 +19,7 @@ import mountsPrivateDefault from '../../migrations/0016_mounts_private_default.s
 import shareAuthRevision from '../../migrations/0017_share_auth_revision.sql?raw';
 import shareLimits from '../../migrations/0018_share_limits_and_counters.sql?raw';
 import disablePikPakMounts from '../../migrations/0019_disable_pikpak_mounts.sql?raw';
+import mountsReadOnly from '../../migrations/0020_mounts_read_only.sql?raw';
 import type { Env } from '../../src/worker/types';
 
 beforeEach(async () => {
@@ -38,7 +39,8 @@ beforeEach(async () => {
           || normalizedSql.startsWith('ALTER TABLE shares ADD COLUMN auth_revision')
           || normalizedSql.startsWith('ALTER TABLE shares ADD COLUMN download_count')
           || normalizedSql.startsWith('ALTER TABLE shares ADD COLUMN max_downloads')
-          || normalizedSql.startsWith('ALTER TABLE shares ADD COLUMN access_count');
+          || normalizedSql.startsWith('ALTER TABLE shares ADD COLUMN access_count')
+          || normalizedSql.startsWith('ALTER TABLE mounts ADD COLUMN read_only');
         if (!(repeatableAddColumn && error instanceof Error && error.message.includes('duplicate column'))) {
           throw error;
         }
@@ -54,6 +56,7 @@ beforeEach(async () => {
   await apply(shareAuthRevision);
   await apply(shareLimits);
   await apply(disablePikPakMounts);
+  await apply(mountsReadOnly);
 
   const foreignKeys = await db.prepare('PRAGMA foreign_keys').first<{ foreign_keys: number }>();
   if (foreignKeys?.foreign_keys !== 1) throw new Error('Worker test D1 must enforce foreign keys');

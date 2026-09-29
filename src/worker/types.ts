@@ -224,6 +224,7 @@ export interface MountRow {
   provider: string;
   enabled: number;
   is_public: number;
+  read_only: number;
   sort_order: number;
   root_item_id: string | null;
   config_json: string;
@@ -239,6 +240,7 @@ export interface Mount {
   provider: string;
   enabled: boolean;
   isPublic: boolean;
+  readOnly: boolean;
   sortOrder: number;
   rootItemId: string | null;
   config: unknown;

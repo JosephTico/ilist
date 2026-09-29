@@ -6,7 +6,7 @@ import type { Mount } from '../../src/worker/types';
 
 const mount: Mount = {
   id: 'mount-dropbox', name: 'My Dropbox', mountPath: '/dropbox', driverType: 'dropbox', provider: 'dropbox',
-  enabled: true, isPublic: true, sortOrder: 0, rootItemId: null, config: {},
+  enabled: true, isPublic: true, readOnly: false, sortOrder: 0, rootItemId: null, config: {},
   createdAt: '2026-08-12T00:00:00Z', updatedAt: '2026-08-12T00:00:00Z',
 };
 

@@ -12,6 +12,7 @@ const mount: Mount = {
   provider: 'cloudflare-r2',
   enabled: true,
   isPublic: true,
+  readOnly: false,
   sortOrder: 0,
   rootItemId: null,
   config: { rootPrefix: 'tenant/root' },

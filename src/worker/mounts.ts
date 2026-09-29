@@ -11,6 +11,7 @@ export interface CreateMountInput {
   provider: string;
   enabled?: boolean;
   isPublic?: boolean;
+  readOnly?: boolean;
   sortOrder?: number;
   rootItemId?: string | null;
   config?: unknown;
@@ -23,6 +24,7 @@ export interface UpdateMountInput {
   provider?: string;
   enabled?: boolean;
   isPublic?: boolean;
+  readOnly?: boolean;
   sortOrder?: number;
   rootItemId?: string | null;
   config?: unknown;
@@ -105,6 +107,7 @@ function toMount(row: MountRow): Mount {
     provider: row.provider,
     enabled: row.enabled === 1,
     isPublic: row.is_public === 1,
+    readOnly: row.read_only === 1,
     sortOrder: row.sort_order,
     rootItemId: row.root_item_id,
     config: JSON.parse(row.config_json),
@@ -160,9 +163,9 @@ export async function createMount(db: D1Database, input: CreateMountInput): Prom
     await db
       .prepare(
         `INSERT INTO mounts (
-          id, name, mount_path, driver_type, provider, enabled, is_public,
+          id, name, mount_path, driver_type, provider, enabled, is_public, read_only,
           sort_order, root_item_id, config_json, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         id,
@@ -172,6 +175,7 @@ export async function createMount(db: D1Database, input: CreateMountInput): Prom
         provider,
         input.enabled === false ? 0 : 1,
         input.isPublic === true ? 1 : 0,
+        input.readOnly === true ? 1 : 0,
         sortOrder,
         input.rootItemId ?? null,
         serializeConfig(input.config),
@@ -210,7 +214,7 @@ export async function prepareMountUpdate(
   const statement = db
     .prepare(
       `UPDATE mounts
-       SET name = ?, mount_path = ?, driver_type = ?, provider = ?, enabled = ?, is_public = ?,
+       SET name = ?, mount_path = ?, driver_type = ?, provider = ?, enabled = ?, is_public = ?, read_only = ?,
            sort_order = ?, root_item_id = ?, config_json = ?, updated_at = ?
        WHERE id = ?`,
     )
@@ -221,6 +225,7 @@ export async function prepareMountUpdate(
       provider,
       input.enabled === undefined ? current.enabled : input.enabled ? 1 : 0,
       input.isPublic === undefined ? current.is_public : input.isPublic ? 1 : 0,
+      input.readOnly === undefined ? current.read_only : input.readOnly ? 1 : 0,
       sortOrder,
       input.rootItemId === undefined ? current.root_item_id : input.rootItemId,
       configJson,

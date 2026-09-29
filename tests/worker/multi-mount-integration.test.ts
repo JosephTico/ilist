@@ -1,7 +1,7 @@
 import { SELF, env } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { driverRegistry } from '../../src/worker/drivers/registry';
-import type { StorageDriver, StorageItem } from '../../src/worker/drivers/types';
+import { LARGE_UPLOAD_THRESHOLD_BYTES, type StorageDriver, type StorageItem } from '../../src/worker/drivers/types';
 import { decodeExternalId, encodeExternalId } from '../../src/worker/external-identity';
 import { createMount } from '../../src/worker/mounts';
 import type { Env } from '../../src/worker/types';
@@ -529,5 +529,85 @@ describe('folder icons and relative file resolution', () => {
     );
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe('read-only storage', () => {
+  async function setup(readOnly: boolean) {
+    const db = (env as unknown as Env).DB;
+    await db.prepare("DELETE FROM mounts WHERE id <> 'native-r2'").run();
+    const mounted = await createMount(db, {
+      name: 'Vault', mountPath: '/vault', driverType: 'dropbox', provider: 'dropbox', isPublic: true, readOnly,
+    });
+    const driver = fakeDriver('vault', true);
+    driverRegistry.dropbox = () => driver;
+    const cookie = await login();
+    const list = async (path: string) => (await (await SELF.fetch(`${origin}/api/fs/list?path=${encodeURIComponent(path)}`, { headers: { cookie } })).json() as {
+      data: { current: { id: string; capabilities: Record<string, boolean> }; items: Array<{ id: string; capabilities: Record<string, boolean> }> };
+    }).data;
+    return { mounted, driver, cookie, list };
+  }
+
+  const post = (cookie: string, path: string, body: unknown, method = 'POST') => SELF.fetch(`${origin}${path}`, {
+    method, headers: { cookie, origin, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+
+  it('reports no mutating capability anywhere in a read-only storage, and keeps reading available', async () => {
+    const { list } = await setup(true);
+    const mountRoot = await list('/vault');
+    const docs = await list('/vault/Docs');
+
+    for (const entry of [mountRoot.current, ...mountRoot.items, docs.current, ...docs.items]) {
+      expect(entry.capabilities).toMatchObject({
+        upload: false, multipartUpload: false, createFolder: false, rename: false, move: false, copy: false, delete: false,
+      });
+    }
+    expect(docs.items[0]!.capabilities).toMatchObject({ preview: true, download: true });
+    expect(mountRoot.items[0]!.capabilities.open).toBe(true);
+  });
+
+  it('offers the same actions on a writable storage, so the read-only result is the flag and not the fixture', async () => {
+    const { list } = await setup(false);
+
+    const mountRoot = await list('/vault');
+
+    expect(mountRoot.current.capabilities).toMatchObject({ upload: true, createFolder: true });
+    expect(mountRoot.items[0]!.capabilities).toMatchObject({ rename: true, move: true, delete: true });
+  });
+
+  it('refuses every mutating request before it reaches the storage', async () => {
+    const { mounted, driver, cookie, list } = await setup(true);
+    const folderId = (await list('/vault')).items[0]!.id;
+    const fileId = (await list('/vault/Docs')).items[0]!.id;
+
+    const createFolder = await post(cookie, '/api/admin/folders', { parentId: folderId, name: 'New' });
+    const upload = await SELF.fetch(`${origin}/api/admin/files/x?parentId=${encodeURIComponent(folderId)}&name=x.txt`, {
+      method: 'PUT', headers: { cookie, origin }, body: 'data',
+    });
+    const rename = await post(cookie, `/api/admin/entries/${encodeURIComponent(fileId)}`, { name: 'renamed.txt' }, 'PATCH');
+    const session = await post(cookie, '/api/admin/uploads/sessions', { parentId: folderId, name: 'big.bin', size: LARGE_UPLOAD_THRESHOLD_BYTES });
+
+    for (const response of [createFolder, upload, rename, session]) {
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ error: { code: 'MOUNT_READ_ONLY' } });
+    }
+    for (const path of ['/api/admin/entries/delete', '/api/admin/entries/move', '/api/admin/entries/copy']) {
+      const response = await post(cookie, path, { ids: [fileId], destinationId: folderId });
+      const result = (await response.json() as { data: { succeeded: string[]; failed: Array<{ code: string }> } }).data;
+      expect(result.succeeded).toEqual([]);
+      expect(result.failed.map((failure) => failure.code)).toEqual(['MOUNT_READ_ONLY']);
+    }
+
+    expect(driver.createFolder).not.toHaveBeenCalled();
+    expect(driver.upload).not.toHaveBeenCalled();
+    expect(driver.rename).not.toHaveBeenCalled();
+    expect(driver.move).not.toHaveBeenCalled();
+    expect(driver.copy).not.toHaveBeenCalled();
+    expect(driver.remove).not.toHaveBeenCalled();
+    expect(driver.resumableUpload!.create).not.toHaveBeenCalled();
+    expect(mounted.readOnly).toBe(true);
+
+    const download = await SELF.fetch(`${origin}/file/${encodeURIComponent(fileId)}/vault.txt`, { redirect: 'manual' });
+    expect(download.status).toBe(302);
   });
 });

@@ -12,7 +12,7 @@ import type { Env, Mount } from '../../src/worker/types';
 const workerEnv = () => env as unknown as Env;
 const mount: Mount = {
   id: 'mount-onedrive', name: 'Personal', mountPath: '/personal', driverType: 'onedrive',
-  provider: 'microsoft-onedrive-personal', enabled: true, isPublic: true, sortOrder: 0,
+  provider: 'microsoft-onedrive-personal', enabled: true, isPublic: true, readOnly: false, sortOrder: 0,
   rootItemId: 'root', config: {}, createdAt: '2026-07-15T00:00:00Z', updatedAt: '2026-07-15T00:00:00Z',
 };
 

@@ -25,6 +25,7 @@ export interface Mount {
   enabled: boolean;
   isPublic: boolean;
   sortOrder: number;
+  readOnly: boolean;
   rootItemId: string | null;
   config: Record<string, unknown>;
   createdAt: string;
@@ -39,6 +40,7 @@ interface BaseMountInput {
   provider: string;
   enabled: boolean;
   isPublic: boolean;
+  readOnly: boolean;
   sortOrder: number;
   rootItemId?: string | null;
 }

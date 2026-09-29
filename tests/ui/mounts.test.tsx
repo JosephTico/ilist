@@ -88,6 +88,56 @@ describe('MountManager', () => {
     });
   });
 
+  it('creates writable storage by default and read-only storage when the checkbox is ticked', async () => {
+    const submissions: Array<Record<string, unknown>> = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/api/admin/me')) return Response.json(admin);
+      if (url.endsWith('/api/admin/mounts') && !init?.method) return Response.json({ ok: true, data: [] });
+      if (url.endsWith('/api/admin/mounts') && init?.method === 'POST') {
+        submissions.push(JSON.parse(String(init.body)));
+        return Response.json({ ok: true, data: savedMount }, { status: 201 });
+      }
+      if (url.includes('/api/fs/list')) return Response.json(emptyRoot);
+      throw new Error(`Unexpected fetch: ${url}`);
+    }));
+    render(<App />);
+
+    for (const readOnly of [false, true]) {
+      await userEvent.click(await screen.findByRole('button', { name: 'Add storage' }));
+      await userEvent.type(screen.getByLabelText('Display name'), 'Archive');
+      await userEvent.type(screen.getByLabelText('Mount path'), '/archive');
+      await userEvent.type(screen.getByLabelText('Account ID'), 'account');
+      await userEvent.type(screen.getByLabelText('Bucket'), 'files');
+      await userEvent.type(screen.getByLabelText('Access Key ID'), 'access');
+      await userEvent.type(screen.getByLabelText('Secret Access Key'), 'secret-value');
+      expect(screen.getByLabelText('Read-only')).not.toBeChecked();
+      if (readOnly) await userEvent.click(screen.getByLabelText('Read-only'));
+      await userEvent.click(screen.getByRole('button', { name: 'Create mount' }));
+      await waitFor(() => expect(submissions).toHaveLength(readOnly ? 2 : 1));
+    }
+
+    expect(submissions.map((body) => body.readOnly)).toEqual([false, true]);
+  });
+
+  it('shows an existing read-only storage as ticked and lets it be made writable again', async () => {
+    let submitted: Record<string, unknown> | null = null;
+    vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (!init?.method) return Response.json({ ok: true, data: [{ ...savedMount, readOnly: true }] });
+      submitted = JSON.parse(String(init.body));
+      return Response.json({ ok: true, data: { ...savedMount, readOnly: false } });
+    }));
+    render(<AppProviders><MountManager onBack={vi.fn()} /></AppProviders>);
+
+    await chooseAction('Archive', 'Edit');
+    expect(screen.getByLabelText('Read-only')).toBeChecked();
+    await userEvent.click(screen.getByLabelText('Read-only'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(submitted).not.toBeNull());
+    expect(submitted).toMatchObject({ readOnly: false });
+  });
+
   it('requires confirmation before publishing a newly created mount and preserves the form on cancel', async () => {
     const requests: RequestInit[] = [];
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

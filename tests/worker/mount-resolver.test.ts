@@ -14,6 +14,7 @@ const mounts: Mount[] = [
     provider: 'custom',
     enabled: true,
     isPublic: true,
+    readOnly: false,
     sortOrder: 0,
     rootItemId: null,
     config: { bucket: 'personal' },

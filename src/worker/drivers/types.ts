@@ -82,6 +82,8 @@ export interface StorageDriver {
   readonly rootId: string;
   readonly capabilities: ReadonlySet<DriverCapability>;
   readonly resumableUpload?: ResumableUploadAdapter;
+  /** Set by the read-only view (see read-only.ts); mutating capabilities are absent when true. */
+  readonly readOnly?: boolean;
   list(parentId: string, cursor?: string): Promise<ListResult>;
   stat(itemId: string): Promise<StorageItem>;
   isWithin(itemId: string, ancestorId: string): Promise<boolean>;

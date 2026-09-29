@@ -8,7 +8,7 @@ import { HttpError } from '../../src/worker/http';
 
 const mount: Mount = {
   id: 'mount-google', name: 'My Drive', mountPath: '/google', driverType: 'google', provider: 'google',
-  enabled: true, isPublic: true, sortOrder: 0, rootItemId: null, config: {},
+  enabled: true, isPublic: true, readOnly: false, sortOrder: 0, rootItemId: null, config: {},
   createdAt: '2026-07-18T00:00:00.000Z', updatedAt: '2026-07-18T00:00:00.000Z',
 };
 

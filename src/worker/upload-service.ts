@@ -8,6 +8,7 @@ import {
   type StorageDriver,
   type StorageItem,
 } from './drivers/types';
+import { mountReadOnly } from './drivers/read-only';
 import { validateEntryName } from './entry-domain';
 import { externalEntry, resolveExternalEntry } from './external-entries';
 import { HttpError } from './http';
@@ -246,6 +247,7 @@ async function sessionDriver(env: Env, record: UploadSessionRecord): Promise<Ses
   const mount = await getMount(env.DB, record.mountId);
   if (!mount || !['onedrive', 's3', 'google', 'dropbox'].includes(mount.driverType)) throw uploadUnsupported();
   const driver = await createDriver(env, mount);
+  if (driver.readOnly) throw mountReadOnly();
   if (!requireResumableUploadAdapter(driver)) throw uploadUnsupported();
   return { mount, driver };
 }
@@ -311,6 +313,7 @@ export async function createResumableUpload(
 
   const body = validateCreateInput(input);
   const external = await resolveExternalEntry(env, body.parentId, true);
+  if (external?.driver.readOnly) throw mountReadOnly();
   if (
     !external
     || external.item.kind !== 'folder'

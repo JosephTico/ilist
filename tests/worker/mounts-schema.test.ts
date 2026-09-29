@@ -32,8 +32,10 @@ describe('mounts schema', () => {
       'config_json',
       'created_at',
       'updated_at',
+      'read_only',
     ]);
     expect(result.results.find((column) => column.name === 'is_public')?.dflt_value).toBe('0');
+    expect(result.results.find((column) => column.name === 'read_only')?.dflt_value).toBe('0');
   });
 
   it('defaults raw inserts that omit publication to private', async () => {

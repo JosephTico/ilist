@@ -7,6 +7,7 @@ import { OneDriveClient } from './onedrive/client';
 import { OneDriveDriver } from './onedrive/driver';
 import { createGoogleDriveDriver } from './google/driver';
 import { createDropboxDriver } from './dropbox/driver';
+import { readOnlyDriver } from './read-only';
 import type { DriverRegistry, StorageDriver } from './types';
 
 export const driverRegistry: DriverRegistry = {
@@ -48,5 +49,6 @@ export async function createDriver(env: Env, mount: Mount, registry: DriverRegis
   }
 
   const credentials = await getCredentials(env, mount.id);
-  return factory(env, mount, credentials);
+  const driver = await factory(env, mount, credentials);
+  return mount.readOnly ? readOnlyDriver(driver) : driver;
 }

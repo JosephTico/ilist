@@ -45,6 +45,7 @@ describe('external entry identity', () => {
       provider: 'google',
       enabled: true,
       isPublic: true,
+      readOnly: false,
       sortOrder: 0,
       rootItemId: null,
       config: {},

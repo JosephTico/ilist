@@ -33,6 +33,7 @@ interface MountRequestBody {
   provider?: unknown;
   enabled?: unknown;
   isPublic?: unknown;
+  readOnly?: unknown;
   sortOrder?: unknown;
   rootItemId?: unknown;
   config?: unknown;
@@ -272,6 +273,7 @@ function createInput(body: MountRequestBody): CreateMountInput {
     provider: requiredString(body.provider, 'INVALID_MOUNT_PROVIDER'),
     ...(optionalBoolean(body.enabled) === undefined ? {} : { enabled: optionalBoolean(body.enabled) }),
     ...(optionalBoolean(body.isPublic) === undefined ? {} : { isPublic: optionalBoolean(body.isPublic) }),
+    ...(optionalBoolean(body.readOnly) === undefined ? {} : { readOnly: optionalBoolean(body.readOnly) }),
     ...(optionalNumber(body.sortOrder) === undefined ? {} : { sortOrder: optionalNumber(body.sortOrder) }),
     ...(optionalRootItemId(body.rootItemId) === undefined ? {} : { rootItemId: optionalRootItemId(body.rootItemId) }),
     config: validateConfig(selectedDriver, body.config),
@@ -288,6 +290,7 @@ function updateInput(body: MountRequestBody, current: Mount): UpdateMountInput {
     ...(body.provider === undefined ? {} : { provider: requiredString(body.provider, 'INVALID_MOUNT_PROVIDER') }),
     ...(optionalBoolean(body.enabled) === undefined ? {} : { enabled: optionalBoolean(body.enabled) }),
     ...(optionalBoolean(body.isPublic) === undefined ? {} : { isPublic: optionalBoolean(body.isPublic) }),
+    ...(optionalBoolean(body.readOnly) === undefined ? {} : { readOnly: optionalBoolean(body.readOnly) }),
     ...(optionalNumber(body.sortOrder) === undefined ? {} : { sortOrder: optionalNumber(body.sortOrder) }),
     ...(optionalRootItemId(body.rootItemId) === undefined ? {} : { rootItemId: optionalRootItemId(body.rootItemId) }),
     config: validateConfig(selectedDriver, config),
@@ -297,7 +300,7 @@ function updateInput(body: MountRequestBody, current: Mount): UpdateMountInput {
 function requestBody(body: unknown): MountRequestBody {
   if (!isRecord(body)) invalidRequest();
   assertOnlyKeys(body, [
-    'name', 'mountPath', 'driverType', 'provider', 'enabled', 'isPublic', 'sortOrder',
+    'name', 'mountPath', 'driverType', 'provider', 'enabled', 'isPublic', 'readOnly', 'sortOrder',
     'rootItemId', 'config', 'credentials',
   ], 'INVALID_REQUEST');
   return body;

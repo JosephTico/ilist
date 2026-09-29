@@ -139,6 +139,8 @@ Worker 作为控制平面，在可能的情况下对文件数据进行流式传�
 
 登录后打开 `/admin/storages`。每个挂载都有自己的显示名称、顶层挂载路径、提供商及加密凭据、公开或私有可见性、启用状态以及可选的提供商根路径。断开连接只会移除账户授权，并保留可复用的应用/提供商配置；删除挂载会移除 ilist 挂载及其全部凭据。两者都不会删除提供商账户、存储桶、云盘或已存储对象。
 
+在存储对话框中勾选**只读**后，该存储只能浏览、预览和下载：上传、新建文件夹、重命名、移动、复制和删除操作会在界面中隐藏，即使管理员也会被 Worker 拒绝。这是每个存储独立的设置，保存在 D1 中（迁移 `0020_mounts_read_only.sql`，部署前请运行 `npx wrangler d1 migrations apply ilist-d1 --remote`）。它适用于 S3 兼容、OneDrive、Google Drive 和 Dropbox 挂载，不适用于内置的 R2 绑定。开启后也会阻止正在进行的可续传上传会话。它不会改变提供商凭据本身的权限，如需该保证，请使用只读凭据。
+
 对于 OneDrive Personal，请遵循 [docs/onedrive-setup.md](docs/onedrive-setup.md)。使用一个仅配置为个人 Microsoft 账户的 Microsoft Entra 应用，并设置 Web 重定向 URI `https://ilist.chius.dev/api/admin/oauth/onedrive/callback` 以及委托的 Graph 权限 `User.Read` 和 `Files.ReadWrite`，然后在 `/admin/storages` 输入应用凭据。
 
 对于 Google Drive，请遵循 [docs/google-drive-setup.md](docs/google-drive-setup.md)。启用 Google Drive API，创建 Web OAuth 客户端，将重定向 URI 设置为 `https://ilist.chius.dev/api/admin/oauth/google/callback`，并在 `/admin/storages` 输入客户端 ID 和密钥。

@@ -57,6 +57,7 @@ export function MountDialog({ mount, active = true, busy, error, onClose, onSubm
   const [rootItemId, setRootItemId] = useState(mount?.rootItemId ?? '');
   const [enabled, setEnabled] = useState(mount?.enabled ?? true);
   const [isPublic, setIsPublic] = useState(mount?.isPublic ?? false);
+  const [readOnly, setReadOnly] = useState(mount?.readOnly ?? false);
   const derivedEndpoint = useMemo(() => provider === 'cloudflare-r2' && accountId ? `https://${accountId}.r2.cloudflarestorage.com` : endpoint, [accountId, endpoint, provider]);
 
   function submit(event: FormEvent) {
@@ -67,7 +68,7 @@ export function MountDialog({ mount, active = true, busy, error, onClose, onSubm
     if (storageType === 'google') {
       void onSubmit({
         name, mountPath, driverType: 'google', provider: 'google',
-        enabled, isPublic, sortOrder: mount?.sortOrder ?? 0,
+        enabled, isPublic, readOnly, sortOrder: mount?.sortOrder ?? 0,
         rootItemId: rootItemId.trim() || null,
         config: {},
         ...(oauthCredentials ? { credentials: oauthCredentials } : {}),
@@ -77,7 +78,7 @@ export function MountDialog({ mount, active = true, busy, error, onClose, onSubm
     if (storageType === 'dropbox') {
       void onSubmit({
         name, mountPath, driverType: 'dropbox', provider: 'dropbox',
-        enabled, isPublic, sortOrder: mount?.sortOrder ?? 0,
+        enabled, isPublic, readOnly, sortOrder: mount?.sortOrder ?? 0,
         rootItemId: rootItemId.trim() || null,
         config: {},
         ...(oauthCredentials ? { credentials: oauthCredentials } : {}),
@@ -87,7 +88,7 @@ export function MountDialog({ mount, active = true, busy, error, onClose, onSubm
     if (storageType === 'onedrive') {
       void onSubmit({
         name, mountPath, driverType: 'onedrive', provider: 'microsoft-onedrive-personal',
-        enabled, isPublic, sortOrder: mount?.sortOrder ?? 0,
+        enabled, isPublic, readOnly, sortOrder: mount?.sortOrder ?? 0,
         rootItemId: rootItemId.trim() || null,
         config: {},
         ...(oauthCredentials ? { credentials: oauthCredentials } : {}),
@@ -96,7 +97,7 @@ export function MountDialog({ mount, active = true, busy, error, onClose, onSubm
     }
     const credentials = accessKeyId || secretAccessKey ? { ...(accessKeyId ? { accessKeyId } : {}), ...(secretAccessKey ? { secretAccessKey } : {}) } : undefined;
     void onSubmit({
-      name, mountPath, driverType: 's3', provider, enabled, isPublic, sortOrder: mount?.sortOrder ?? 0,
+      name, mountPath, driverType: 's3', provider, enabled, isPublic, readOnly, sortOrder: mount?.sortOrder ?? 0,
       config: { endpoint: derivedEndpoint, region, bucket, ...(rootPrefix ? { rootPrefix } : {}), addressingMode },
       ...(credentials ? { credentials } : {}),
     });
@@ -127,7 +128,7 @@ export function MountDialog({ mount, active = true, busy, error, onClose, onSubm
             <div className="oneDriveConnectNote">{storageType === 'google' ? t('mount.googleDriveAuthorizationHint') : storageType === 'dropbox' ? t('mount.dropboxAuthorizationHint') : t('mount.oneDriveAuthorizationHint')}</div>
           </>}
         </div>
-        <div className="mountSwitches"><label><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{t('common.enabled')}</label><label><input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />{t('mount.visibleToGuests')}</label></div>
+        <div className="mountSwitches"><label><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{t('common.enabled')}</label><label><input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />{t('mount.visibleToGuests')}</label><label title={t('mount.readOnlyHint')}><input type="checkbox" checked={readOnly} onChange={(event) => setReadOnly(event.target.checked)} />{t('mount.readOnly')}</label></div>
         {error ? <div className="formError" role="alert">{error}</div> : null}
         <footer><button className="button" type="button" onClick={onClose}>{t('action.cancel')}</button><button ref={submitButtonRef} className="button primary" type="submit" disabled={busy}>{mount ? t('mount.saveChanges') : storageType === 'onedrive' || storageType === 'google' || storageType === 'dropbox' ? t('mount.createAndConnect') : t('mount.createMount')}</button></footer>
       </form>

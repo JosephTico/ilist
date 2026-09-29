@@ -1,4 +1,5 @@
 import { createDriver } from './drivers/registry';
+import { mountReadOnly } from './drivers/read-only';
 import { requireResumableUploadAdapter, type StorageDriver, type StorageItem } from './drivers/types';
 import { matchesNameFilter } from './entries';
 import { encodeExternalId, decodeExternalId, type ExternalIdentity } from './external-identity';
@@ -182,6 +183,8 @@ export async function resolveRelativeExternalEntry(
 
 export function requireExternalCapability(driver: StorageDriver, capability: Parameters<StorageDriver['capabilities']['has']>[0]): void {
   if (!driver.capabilities.has(capability)) {
+    // Read and list stay available on read-only storages; anything else is refused for that reason.
+    if (driver.readOnly && capability !== 'list' && capability !== 'download') throw mountReadOnly();
     throw new HttpError(405, 'OPERATION_UNSUPPORTED', 'Storage driver does not support this operation');
   }
 }

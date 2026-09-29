@@ -104,6 +104,38 @@ describe('mount administration API', () => {
     expect((await response.json() as { data: { isPublic: boolean } }).data.isPublic).toBe(false);
   });
 
+  it('stores the read-only flag on create and update and rejects non-boolean values', async () => {
+    const body = { name: 'Frozen', mountPath: '/frozen', driverType: 's3', provider: 'custom', config: s3Config, credentials: { accessKeyId: 'key', secretAccessKey: 'secret' } };
+    const post = (extra: Record<string, unknown>) => adminFetch('/api/admin/mounts', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, ...extra }),
+    });
+
+    expect((await (await post({ readOnly: 'yes' })).json() as { ok: boolean }).ok).toBe(false);
+    const created = await post({ readOnly: true });
+    expect(created.status).toBe(200);
+    const mount = (await created.json() as { data: { id: string; readOnly: boolean } }).data;
+    expect(mount.readOnly).toBe(true);
+
+    const patch = (payload: Record<string, unknown>) => adminFetch(`/api/admin/mounts/${mount.id}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    const untouched = await patch({ name: 'Frozen renamed' });
+    expect((await untouched.json() as { data: { readOnly: boolean } }).data.readOnly).toBe(true);
+    const writable = await patch({ readOnly: false });
+    expect((await writable.json() as { data: { readOnly: boolean } }).data.readOnly).toBe(false);
+    expect((await patch({ readOnly: 1 })).status).toBe(400);
+  });
+
+  it('creates mounts writable unless the request asks for read-only', async () => {
+    const response = await adminFetch('/api/admin/mounts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Open', mountPath: '/open', driverType: 's3', provider: 'custom', config: s3Config, credentials: { accessKeyId: 'key', secretAccessKey: 'secret' } }),
+    });
+
+    expect((await response.json() as { data: { readOnly: boolean } }).data.readOnly).toBe(false);
+  });
+
   it.each([
     ['OneDrive', 'onedrive', 'microsoft-onedrive-personal'],
     ['Dropbox', 'dropbox', 'dropbox'],
