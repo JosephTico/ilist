@@ -62,7 +62,7 @@ describe('preferences and localization', () => {
 
     const preferences = readPreferences(failingStorage);
 
-    expect(preferences).toMatchObject({ version: 1, theme: 'system', defaultView: 'list' });
+    expect(preferences).toMatchObject({ version: 1, theme: 'system', defaultView: null });
     expect(() => writePreferences(preferences, failingStorage)).not.toThrow();
   });
 

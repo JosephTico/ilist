@@ -1,6 +1,7 @@
 import { Folder, Github, Languages, LogIn, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { usePreferences } from '../preferences/PreferencesProvider';
+import { useSite } from '../site/SiteProvider';
 
 interface AppHeaderProps {
   admin: boolean;
@@ -14,6 +15,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ admin, username, onHome, onStorage, onSignIn, onSignOut, showSessionActions = true }: AppHeaderProps) {
   const { resolvedTheme, updatePreferences } = usePreferences();
+  const { title } = useSite();
   const { locale, t } = useI18n();
   const dark = resolvedTheme === 'dark';
 
@@ -38,7 +40,7 @@ export function AppHeader({ admin, username, onHome, onStorage, onSignIn, onSign
       <div className="headerInner">
         <button className="siteName" type="button" onClick={onHome} aria-label={t('shell.openRoot')} title={t('shell.openRoot')}>
           <Folder aria-hidden="true" size={19} />
-          <span>iList</span>
+          <span>{title}</span>
         </button>
         <div className="headerControls">
           <a className="headerControl" href="https://github.com/chius-me/ilist" target="_blank" rel="noreferrer" aria-label={t('shell.openGitHub')} title={t('shell.openGitHub')}>

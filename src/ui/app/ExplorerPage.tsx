@@ -28,6 +28,7 @@ import { directoryErrorHint, directoryErrorTitle } from '../lib/directory-errors
 import { DIRECTORY_QUERY_DEBOUNCE_MS, normalizeDirectoryQuery } from '../lib/directory-query';
 import { sortEntries } from '../lib/explorer-sort';
 import { usePreferences } from '../preferences/PreferencesProvider';
+import { useEffectiveView } from '../site/useEffectiveView';
 import { isEntryMutable, type Entry } from '../types/entries';
 
 function LoadingCollection({ view, label }: { view: ExplorerView; label: string }) {
@@ -47,7 +48,7 @@ export interface ExplorerPageProps {
   path: string;
   previewId: string | null;
   session: ReturnType<typeof useSession>;
-  onOpenPath(path: string): void;
+  onOpenPath(path: string, options?: { replace?: boolean }): void;
   onOpenPreview(id: string): void;
   onClosePreview(): void;
   onRequestLogin(): void;
@@ -63,8 +64,8 @@ export function ExplorerPage({
 }: ExplorerPageProps) {
   const selection = useSelection();
   const { t } = useI18n();
-  const { preferences, updatePreferences } = usePreferences();
-  const view: ExplorerView = preferences.defaultView;
+  const { updatePreferences } = usePreferences();
+  const view: ExplorerView = useEffectiveView();
   const [query, setQuery] = useState('');
   const [serverQuery, setServerQuery] = useState('');
   const directory = useDirectory(path, session.status, serverQuery);
@@ -114,6 +115,15 @@ export function ExplorerPage({
     setServerQuery('');
     setMenu(null);
   }, [path, selection.clear]);
+
+  // With a single storage the virtual root is a dead end, so go straight to it. `replace` keeps Back usable.
+  useEffect(() => {
+    if (path !== '/' || serverQuery || directory.data?.current.id !== 'virtual-root') return;
+    const [only, ...rest] = directory.data.items;
+    if (only && rest.length === 0 && only.kind === 'folder' && only.mountPath) {
+      onOpenPath(entryPath('/', only), { replace: true });
+    }
+  }, [path, serverQuery, directory.data, onOpenPath]);
 
   useEffect(() => {
     const handle = window.setTimeout(

@@ -214,13 +214,22 @@ describe('ExplorerApp', () => {
         ...root.data,
         current: { ...root.data.current, id: 'virtual-root', mountPath: null },
         breadcrumbs: [{ id: 'virtual-root', name: 'iList', path: '/' }],
-        items: [{
-          ...root.data.items[0],
-          id: 'archive-mount',
-          name: 'Cold Storage',
-          mountPath: '/archive',
-          mountId: 'archive-mount',
-        }],
+        items: [
+          {
+            ...root.data.items[0],
+            id: 'archive-mount',
+            name: 'Cold Storage',
+            mountPath: '/archive',
+            mountId: 'archive-mount',
+          },
+          {
+            ...root.data.items[0],
+            id: 'hot-mount',
+            name: 'Hot Storage',
+            mountPath: '/hot',
+            mountId: 'hot-mount',
+          },
+        ],
       },
     };
     const archive = {

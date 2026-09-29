@@ -8,7 +8,8 @@ export interface UiPreferences {
   version: 1;
   locale: Locale;
   theme: ThemePreference;
-  defaultView: ExplorerViewPreference;
+  /** The visitor's own choice; null means "follow the site-wide default". */
+  defaultView: ExplorerViewPreference | null;
 }
 
 export function defaultPreferences(): UiPreferences {
@@ -16,7 +17,7 @@ export function defaultPreferences(): UiPreferences {
     version: 1,
     locale: navigator.language.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en',
     theme: 'system',
-    defaultView: 'list',
+    defaultView: null,
   };
 }
 
@@ -27,7 +28,7 @@ export function readPreferences(storage?: Storage): UiPreferences {
       value?.version !== 1
       || !['en', 'zh-CN'].includes(value.locale ?? '')
       || !['system', 'light', 'dark'].includes(value.theme ?? '')
-      || !['list', 'grid'].includes(value.defaultView ?? '')
+      || (value.defaultView !== null && !['list', 'grid'].includes(value.defaultView ?? ''))
     ) {
       return defaultPreferences();
     }

@@ -17,8 +17,9 @@ function canonicalPath(path: string): string {
   return segments.length ? `/${segments.join('/')}` : '/';
 }
 
-function publish(url: URL): void {
-  history.pushState(null, '', `${url.pathname}${url.search}`);
+function publish(url: URL, replace = false): void {
+  if (replace) history.replaceState(null, '', `${url.pathname}${url.search}`);
+  else history.pushState(null, '', `${url.pathname}${url.search}`);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
@@ -26,7 +27,10 @@ export function useExplorerLocation() {
   useSyncExternalStore(subscribe, snapshot, snapshot);
   const path = window.location.pathname;
   const previewId = new URL(window.location.href).searchParams.get('preview');
-  const openPath = useCallback((nextPath: string) => publish(new URL(canonicalPath(nextPath), window.location.origin)), []);
+  const openPath = useCallback(
+    (nextPath: string, options?: { replace?: boolean }) => publish(new URL(canonicalPath(nextPath), window.location.origin), options?.replace),
+    [],
+  );
   const openPreview = useCallback((id: string) => {
     const url = new URL(window.location.href);
     url.searchParams.set('preview', id);
