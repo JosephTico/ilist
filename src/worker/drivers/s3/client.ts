@@ -279,7 +279,7 @@ export class S3Client {
       credentials: this.credentials,
       now: this.now(),
     });
-    const response = await this.fetcher(url, { method, headers, body: init.body, signal: init.signal });
+    const response = await this.fetcher.call(globalThis, url, { method, headers, body: init.body, signal: init.signal });
     if (!response.ok) throw await S3Error.fromResponse(response);
     return response;
   }
