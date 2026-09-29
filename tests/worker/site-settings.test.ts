@@ -33,7 +33,7 @@ async function publicSettings(): Promise<{ title: string; defaultView: string }>
 const publicTitle = async () => (await publicSettings()).title;
 
 afterEach(async () => {
-  await (env as unknown as Env).DB.prepare("DELETE FROM settings WHERE key IN ('site.title', 'site.defaultView')").run();
+  await (env as unknown as Env).DB.prepare("DELETE FROM settings WHERE key LIKE 'site.%'").run();
 });
 
 describe('site title', () => {
@@ -121,10 +121,10 @@ describe('site default view', () => {
     await putSettings({ title: 'Card Vault', defaultView: 'grid' }, cookie);
 
     await putTitle('Renamed', cookie);
-    expect(await publicSettings()).toEqual({ title: 'Renamed', defaultView: 'grid' });
+    expect(await publicSettings()).toMatchObject({ title: 'Renamed', defaultView: 'grid' });
 
     await putSettings({ defaultView: 'list' }, cookie);
-    expect(await publicSettings()).toEqual({ title: 'Renamed', defaultView: 'list' });
+    expect(await publicSettings()).toMatchObject({ title: 'Renamed', defaultView: 'list' });
   });
 
   it.each([
@@ -136,12 +136,55 @@ describe('site default view', () => {
     await putSettings({ title: 'Kept', defaultView: 'list' }, cookie);
 
     expect((await putSettings(body, cookie)).status).toBe(400);
-    expect(await publicSettings()).toEqual({ title: 'Kept', defaultView: 'list' });
+    expect(await publicSettings()).toMatchObject({ title: 'Kept', defaultView: 'list' });
   });
 
   it.each([[{}], [null], [[]], [{ unrelated: true }]])('rejects a body with no setting to change: %j', async (body) => {
     const cookie = await login();
 
     expect((await putSettings(body, cookie)).status).toBe(400);
+  });
+});
+
+describe('hidden header controls', () => {
+  const flags = ['hideGithubLink', 'hideLanguageSelector', 'hideLogin'] as const;
+
+  it('shows every control by default', async () => {
+    expect(await publicSettings()).toMatchObject({ hideGithubLink: false, hideLanguageSelector: false, hideLogin: false });
+  });
+
+  it.each(flags)('hides only %s, for guests too, and can show it again', async (flag) => {
+    expect((await putSettings({ [flag]: true })).status).toBe(401);
+    const cookie = await login();
+
+    const hidden = await putSettings({ [flag]: true }, cookie);
+
+    expect(hidden.status).toBe(200);
+    const settings = await publicSettings();
+    for (const other of flags) expect(settings[other as keyof typeof settings]).toBe(other === flag);
+
+    await putSettings({ [flag]: false }, cookie);
+    for (const other of flags) expect((await publicSettings())[other as never]).toBe(false);
+  });
+
+  it('updates only the fields provided and leaves title and view alone', async () => {
+    const cookie = await login();
+    await putSettings({ title: 'Card Vault', defaultView: 'grid', hideLogin: true }, cookie);
+
+    await putSettings({ hideGithubLink: true }, cookie);
+
+    expect(await publicSettings()).toMatchObject({
+      title: 'Card Vault', defaultView: 'grid', hideLogin: true, hideGithubLink: true, hideLanguageSelector: false,
+    });
+  });
+
+  it.each([['a string', 'yes'], ['a number', 1], ['null', null]])('rejects %s as a flag value without changing anything', async (_label, value) => {
+    const cookie = await login();
+    await putSettings({ hideLogin: true }, cookie);
+
+    const response = await putSettings({ hideGithubLink: value, hideLogin: false }, cookie);
+
+    expect(response.status).toBe(400);
+    expect(await publicSettings()).toMatchObject({ hideGithubLink: false, hideLogin: true });
   });
 });

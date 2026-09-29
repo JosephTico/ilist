@@ -1,5 +1,5 @@
 import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { DEFAULT_SITE_SETTINGS, getSiteSettings, isSiteView, saveSiteSettings, type SiteSettings } from '../api/site';
+import { DEFAULT_SITE_SETTINGS, getSiteSettings, parseSiteSettings, saveSiteSettings, type SiteSettings } from '../api/site';
 
 const SITE_SETTINGS_CACHE_KEY = 'ilist.ui.siteSettings';
 
@@ -13,10 +13,7 @@ const SiteContext = createContext<SiteContextValue | null>(null);
 function readCachedSettings(): SiteSettings {
   try {
     const value = JSON.parse(window.localStorage.getItem(SITE_SETTINGS_CACHE_KEY) ?? 'null') as Partial<SiteSettings> | null;
-    return {
-      title: typeof value?.title === 'string' && value.title ? value.title : DEFAULT_SITE_SETTINGS.title,
-      defaultView: isSiteView(value?.defaultView) ? value.defaultView : DEFAULT_SITE_SETTINGS.defaultView,
-    };
+    return parseSiteSettings(value) ?? DEFAULT_SITE_SETTINGS;
   } catch {
     return DEFAULT_SITE_SETTINGS;
   }

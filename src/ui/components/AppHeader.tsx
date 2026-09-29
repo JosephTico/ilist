@@ -15,7 +15,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ admin, username, onHome, onStorage, onSignIn, onSignOut, showSessionActions = true }: AppHeaderProps) {
   const { resolvedTheme, updatePreferences } = usePreferences();
-  const { title } = useSite();
+  const { title, hideGithubLink, hideLanguageSelector, hideLogin } = useSite();
   const { locale, t } = useI18n();
   const dark = resolvedTheme === 'dark';
 
@@ -43,13 +43,17 @@ export function AppHeader({ admin, username, onHome, onStorage, onSignIn, onSign
           <span>{title}</span>
         </button>
         <div className="headerControls">
-          <a className="headerControl" href="https://github.com/chius-me/ilist" target="_blank" rel="noreferrer" aria-label={t('shell.openGitHub')} title={t('shell.openGitHub')}>
-            <Github aria-hidden="true" size={17} />
-          </a>
-          <button className="headerControl languageControl" type="button" onClick={changeLanguage} aria-label={t('shell.changeLanguage')} title={t('shell.changeLanguage')}>
-            <Languages aria-hidden="true" size={17} />
-            <span>{t('shell.localeLabel')}</span>
-          </button>
+          {hideGithubLink ? null : (
+            <a className="headerControl" href="https://github.com/chius-me/ilist" target="_blank" rel="noreferrer" aria-label={t('shell.openGitHub')} title={t('shell.openGitHub')}>
+              <Github aria-hidden="true" size={17} />
+            </a>
+          )}
+          {hideLanguageSelector ? null : (
+            <button className="headerControl languageControl" type="button" onClick={changeLanguage} aria-label={t('shell.changeLanguage')} title={t('shell.changeLanguage')}>
+              <Languages aria-hidden="true" size={17} />
+              <span>{t('shell.localeLabel')}</span>
+            </button>
+          )}
           <button className="headerControl" type="button" onClick={changeTheme} aria-label={t('shell.changeTheme')} title={t('shell.changeTheme')}>
             {dark ? <Sun aria-hidden="true" size={17} /> : <Moon aria-hidden="true" size={17} />}
           </button>
@@ -63,7 +67,7 @@ export function AppHeader({ admin, username, onHome, onStorage, onSignIn, onSign
                 <LogOut aria-hidden="true" size={17} />
               </button>
             </>
-          ) : showSessionActions ? (
+          ) : showSessionActions && !hideLogin ? (
             <button className="headerControl" type="button" onClick={onSignIn} aria-label={t('nav.signIn')} title={t('nav.signIn')}>
               <LogIn aria-hidden="true" size={17} />
             </button>

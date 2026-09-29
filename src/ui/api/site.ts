@@ -5,21 +5,43 @@ export const SITE_TITLE_MAX_LENGTH = 60;
 
 export type SiteView = 'list' | 'grid';
 
-export interface SiteSettings {
+/** Header controls an administrator can hide for every visitor. */
+export type SiteFlag = 'hideGithubLink' | 'hideLanguageSelector' | 'hideLogin';
+
+export interface SiteSettings extends Record<SiteFlag, boolean> {
   title: string;
   defaultView: SiteView;
 }
 
-export const DEFAULT_SITE_SETTINGS: SiteSettings = { title: DEFAULT_SITE_TITLE, defaultView: 'list' };
+export const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  title: DEFAULT_SITE_TITLE,
+  defaultView: 'list',
+  hideGithubLink: false,
+  hideLanguageSelector: false,
+  hideLogin: false,
+};
 
 export function isSiteView(value: unknown): value is SiteView {
   return value === 'list' || value === 'grid';
 }
 
+/** Title and view are required; a flag that is absent (older response or cache) simply means "shown". */
+export function parseSiteSettings(data: Partial<Record<keyof SiteSettings, unknown>> | null | undefined): SiteSettings | null {
+  if (typeof data?.title !== 'string' || !data.title || !isSiteView(data.defaultView)) return null;
+  return {
+    title: data.title,
+    defaultView: data.defaultView,
+    hideGithubLink: data.hideGithubLink === true,
+    hideLanguageSelector: data.hideLanguageSelector === true,
+    hideLogin: data.hideLogin === true,
+  };
+}
+
 export async function getSiteSettings(signal?: AbortSignal): Promise<SiteSettings> {
   const data = await unwrap<Partial<Record<keyof SiteSettings, unknown>>>(await fetch('/api/site', { signal, credentials: 'same-origin' }));
-  if (typeof data?.title !== 'string' || !data.title || !isSiteView(data.defaultView)) throw new Error('Invalid site settings response');
-  return { title: data.title, defaultView: data.defaultView };
+  const settings = parseSiteSettings(data);
+  if (!settings) throw new Error('Invalid site settings response');
+  return settings;
 }
 
 /** Saves only the provided site-wide settings (administrators only). An empty title restores the default. */

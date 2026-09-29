@@ -1,11 +1,19 @@
 import { RotateCcw } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
-import { isSiteView, SITE_TITLE_MAX_LENGTH } from '../api/site';
+import { isSiteView, SITE_TITLE_MAX_LENGTH, type SiteFlag } from '../api/site';
 import { useI18n } from '../i18n/I18nProvider';
 import { localizedApiError } from '../i18n/apiErrors';
+import type { MessageKey } from '../i18n/messages';
 import { defaultPreferences, type Locale, type ThemePreference } from '../preferences/preferences';
 import { usePreferences } from '../preferences/PreferencesProvider';
 import { useSite } from '../site/SiteProvider';
+
+/** Header controls an administrator can hide for everyone; the label names the action, so a ticked box means hidden. */
+const HEADER_CONTROLS: ReadonlyArray<{ flag: SiteFlag; label: MessageKey; hint?: MessageKey }> = [
+  { flag: 'hideGithubLink', label: 'site.hideGithub' },
+  { flag: 'hideLanguageSelector', label: 'site.hideLanguage' },
+  { flag: 'hideLogin', label: 'site.hideLogin', hint: 'site.hideLoginHint' },
+];
 
 export function PreferencesPage() {
   const { t } = useI18n();
@@ -15,6 +23,7 @@ export function PreferencesPage() {
   const [titleStatus, setTitleStatus] = useState<{ tone: 'saved' | 'error'; message: string } | null>(null);
   const [titleBusy, setTitleBusy] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
+  const [headerError, setHeaderError] = useState<string | null>(null);
   const titleValue = draft ?? site.title;
 
   async function submitTitle(event: FormEvent) {
@@ -29,6 +38,16 @@ export function PreferencesPage() {
       setTitleStatus({ tone: 'error', message: localizedApiError(error, t, 'site.titleUnableSave') });
     } finally {
       setTitleBusy(false);
+    }
+  }
+
+  // Saved immediately; the box only changes once the server confirms, so a failed save never looks applied.
+  async function setHidden(flag: SiteFlag, hidden: boolean) {
+    setHeaderError(null);
+    try {
+      await site.saveSettings({ [flag]: hidden });
+    } catch (error) {
+      setHeaderError(localizedApiError(error, t, 'site.headerUnableSave'));
     }
   }
 
@@ -95,6 +114,15 @@ export function PreferencesPage() {
           </select>
         </label>
         {viewError ? <p className="formError preferencesFormActions" role="alert">{viewError}</p> : null}
+      </form>
+      <form className="preferencesForm" aria-label={t('site.headerControls')} onSubmit={(event) => event.preventDefault()}>
+        {HEADER_CONTROLS.map(({ flag, label, hint }) => (
+          <label key={flag}>
+            <span><strong>{t(label)}</strong>{hint ? <small>{t(hint)}</small> : null}</span>
+            <input type="checkbox" aria-label={t(label)} checked={site[flag]} onChange={(event) => void setHidden(flag, event.target.checked)} />
+          </label>
+        ))}
+        {headerError ? <p className="formError preferencesFormActions" role="alert">{headerError}</p> : null}
       </form>
     </main>
   );

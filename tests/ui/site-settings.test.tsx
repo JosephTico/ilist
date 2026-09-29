@@ -9,9 +9,11 @@ import { PREFERENCES_KEY } from '../../src/ui/preferences/preferences';
 import type { Entry } from '../../src/ui/types/entries';
 
 const noop = () => undefined;
-const site = (overrides: { title?: string; defaultView?: string } = {}) => ({
+const site = (overrides: Record<string, unknown> = {}) => ({
   ok: true,
-  data: { title: 'iList', defaultView: 'list', ...overrides },
+  data: {
+    title: 'iList', defaultView: 'list', hideGithubLink: false, hideLanguageSelector: false, hideLogin: false, ...overrides,
+  },
 });
 
 function renderHeader() {
@@ -191,5 +193,119 @@ describe('site default view', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to save the default view.');
     expect(screen.getByRole('combobox', { name: 'Default view' })).toHaveValue('list');
     expect(JSON.parse(localStorage.getItem(PREFERENCES_KEY)!).defaultView).toBe('list');
+  });
+});
+
+describe('hidden header controls', () => {
+  const GITHUB = { role: 'link', name: 'Open iList on GitHub' } as const;
+  const LANGUAGE = { role: 'button', name: 'Change language' } as const;
+  const SIGN_IN = { role: 'button', name: 'Admin sign in' } as const;
+
+  function stubSite(overrides: Record<string, unknown>) {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/site') return Response.json(site(overrides));
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    }));
+  }
+
+  it('shows every control by default', async () => {
+    stubSite({});
+    renderHeader();
+
+    expect(await screen.findByRole(GITHUB.role, { name: GITHUB.name })).toBeVisible();
+    expect(screen.getByRole(LANGUAGE.role, { name: LANGUAGE.name })).toBeVisible();
+    expect(screen.getByRole(SIGN_IN.role, { name: SIGN_IN.name })).toBeVisible();
+  });
+
+  it.each([
+    ['hideGithubLink', GITHUB],
+    ['hideLanguageSelector', LANGUAGE],
+    ['hideLogin', SIGN_IN],
+  ] as const)('%s hides only its own control', async (flag, hidden) => {
+    stubSite({ [flag]: true });
+    renderHeader();
+
+    await waitFor(() => expect(screen.queryByRole(hidden.role, { name: hidden.name })).toBeNull());
+    for (const control of [GITHUB, LANGUAGE, SIGN_IN]) {
+      if (control !== hidden) expect(screen.getByRole(control.role, { name: control.name })).toBeVisible();
+    }
+    expect(screen.getByRole('button', { name: 'Change theme' })).toBeVisible();
+  });
+
+  it('keeps sign-out and storage settings for a signed-in administrator even when the sign-in button is hidden', async () => {
+    stubSite({ hideLogin: true });
+    render(
+      <AppProviders>
+        <AppHeader admin username="admin" onHome={noop} onStorage={noop} onSignIn={noop} onSignOut={noop} />
+      </AppProviders>,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Storage settings' })).toBeVisible();
+    expect(screen.queryByRole(SIGN_IN.role, { name: SIGN_IN.name })).toBeNull();
+  });
+
+  it('still opens the sign-in dialog at /admin when the sign-in button is hidden', async () => {
+    history.replaceState(null, '', '/admin');
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/site') return Response.json(site({ hideLogin: true }));
+      if (url.includes('/api/admin/me')) return Response.json({ ok: false, error: { code: 'AUTH_REQUIRED', message: 'x' } }, { status: 401 });
+      if (url.includes('/api/fs/list')) return Response.json({ ok: false, error: { code: 'NOT_FOUND', message: 'x' } }, { status: 404 });
+      throw new Error(`Unexpected fetch: ${url}`);
+    }));
+
+    render(<AppProviders><ExplorerApp /></AppProviders>);
+
+    expect(await screen.findByRole('dialog', { name: 'Admin sign in' })).toBeVisible();
+    await waitFor(() => expect(screen.queryByRole(SIGN_IN.role, { name: SIGN_IN.name })).toBeNull());
+  });
+
+  it('saves a toggle from the appearance page and applies it to the header at once', async () => {
+    const puts: unknown[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/site') return Response.json(site());
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return Response.json(site({ hideGithubLink: true }));
+      }
+      throw new Error('Unexpected fetch');
+    }));
+    render(
+      <AppProviders>
+        <AppHeader admin={false} onHome={noop} onStorage={noop} onSignIn={noop} onSignOut={noop} />
+        <PreferencesPage />
+      </AppProviders>,
+    );
+    const checkbox = screen.getByRole('checkbox', { name: 'Hide GitHub link' });
+    expect(checkbox).not.toBeChecked();
+
+    await userEvent.click(checkbox);
+
+    await waitFor(() => expect(checkbox).toBeChecked());
+    expect(puts).toEqual([{ hideGithubLink: true }]);
+    expect(screen.queryByRole(GITHUB.role, { name: GITHUB.name })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Hide sign-in button' })).not.toBeChecked();
+  });
+
+  it('leaves the box and the header unchanged and reports an error when saving fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/site') return Response.json(site());
+      if (init?.method === 'PUT') return Response.json({ ok: false, error: { code: 'X', message: 'raw' } }, { status: 500 });
+      throw new Error('Unexpected fetch');
+    }));
+    render(
+      <AppProviders>
+        <AppHeader admin={false} onHome={noop} onStorage={noop} onSignIn={noop} onSignOut={noop} />
+        <PreferencesPage />
+      </AppProviders>,
+    );
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Hide sign-in button' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to save the header settings.');
+    expect(screen.getByRole('checkbox', { name: 'Hide sign-in button' })).not.toBeChecked();
+    expect(screen.getByRole(SIGN_IN.role, { name: SIGN_IN.name })).toBeVisible();
   });
 });

@@ -56,7 +56,7 @@ import { keyFromPath, putObject, streamEntryObject } from './r2';
 import { withApplicationSecurityHeaders } from './response-security';
 import { handleShareAdminRoutes } from './share-admin-routes';
 import { handleSharePublicRoutes, type SharePublicRouteOptions } from './share-public-routes';
-import { getSiteSettings, normalizeSiteTitle, parseSiteView, updateSiteSettings } from './site-settings';
+import { getSiteSettings, parseSiteSettingsPatch, updateSiteSettings } from './site-settings';
 import type { BatchFailure, BatchResult, Env } from './types';
 import { handleUploadRoutes } from './upload-routes';
 
@@ -429,11 +429,7 @@ async function handleAdmin(request: Request, env: Env, url: URL, options: RouteR
 
   if (url.pathname === '/api/admin/site') {
     if (request.method !== 'PUT') return methodNotAllowed();
-    const body = await readJson<{ title?: unknown; defaultView?: unknown }>(request);
-    if (typeof body !== 'object' || body === null || Array.isArray(body) || !('title' in body || 'defaultView' in body)) invalidRequest();
-    const patch: Parameters<typeof updateSiteSettings>[1] = {};
-    if ('title' in body) patch.title = normalizeSiteTitle(body.title);
-    if ('defaultView' in body) patch.defaultView = parseSiteView(body.defaultView);
+    const patch = parseSiteSettingsPatch(await readJson<unknown>(request));
     return ok(await updateSiteSettings(env.DB, patch));
   }
 
