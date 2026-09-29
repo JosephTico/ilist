@@ -105,7 +105,7 @@ Worker 作为控制平面，在可能的情况下对文件数据进行流式传�
 
    密码命令拒绝通过参数传入密码。在终端中读取密码时会关闭字符回显；自动化场景可通过非 TTY 标准输入提供且仅提供一行密码。stdout 只输出最终哈希，提示和错误只写入 stderr。
 
-   新哈希使用 `pbkdf2-sha256:600000`。旧版 `pbkdf2` 哈希在本版本仍可使用，但管理员哈希属于 Cloudflare Secret，Worker 无法自动回写升级。使用旧哈希成功登录后，请执行以下命令轮换：
+   新哈希使用 `pbkdf2-sha256:100000`；Cloudflare Workers 在生产环境中拒绝超过 100,000 次迭代的 PBKDF2。旧版 `pbkdf2` 哈希在本版本仍可使用，但管理员哈希属于 Cloudflare Secret，Worker 无法自动回写升级。使用旧哈希成功登录后，请执行以下命令轮换：
 
    ```bash
    npm run hash-password

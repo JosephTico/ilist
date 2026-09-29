@@ -391,7 +391,7 @@ async function handleLogin(request: Request, env: Env, options: RouteRequestOpti
     }
     reservationFinalized = true;
     if (verification.needsUpgrade) {
-      console.warn('ADMIN_PASSWORD_HASH uses the legacy PBKDF2 format; rotate it to pbkdf2-sha256:600000.');
+      console.warn('ADMIN_PASSWORD_HASH uses the legacy PBKDF2 format; rotate it to pbkdf2-sha256:100000.');
     }
     await cleanupExpiredSessions(env);
     const now = Math.floor((options.passwordAuthentication?.now?.() ?? Date.now() / 1000));

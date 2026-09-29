@@ -103,7 +103,7 @@ The Worker acts as the control plane and streams or redirects file data where po
 
    The password command rejects password arguments. On a terminal it disables character echo while reading the prompt. Automation may provide exactly one password line through non-TTY standard input; stdout contains only the generated hash, while prompts and errors use stderr.
 
-   New hashes use `pbkdf2-sha256:600000`. Legacy `pbkdf2` hashes remain valid for this release, but an administrator hash is a Cloudflare Secret and cannot be upgraded automatically. After a successful legacy login, rotate it with these exact commands:
+   New hashes use `pbkdf2-sha256:100000`; Cloudflare Workers reject PBKDF2 above 100,000 iterations in production. Legacy `pbkdf2` hashes remain valid for this release, but an administrator hash is a Cloudflare Secret and cannot be upgraded automatically. After a successful legacy login, rotate it with these exact commands:
 
    ```bash
    npm run hash-password

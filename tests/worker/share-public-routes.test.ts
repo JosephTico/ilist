@@ -217,7 +217,7 @@ describe('public share routes', () => {
     expect(verifiedHash).toBe(LEGACY_SHARE_PASSWORD_HASH);
     const upgraded = await workerEnv().DB.prepare('SELECT password_hash, auth_revision FROM shares WHERE id = ?')
       .bind(id).first<{ password_hash: string; auth_revision: number }>();
-    expect(upgraded?.password_hash).toMatch(/^pbkdf2-sha256:600000:[0-9a-f]{32}:[0-9a-f]{64}$/);
+    expect(upgraded?.password_hash).toMatch(/^pbkdf2-sha256:100000:[0-9a-f]{32}:[0-9a-f]{64}$/);
     expect(upgraded?.auth_revision).toBe(1);
   });
 
@@ -286,7 +286,7 @@ describe('public share routes', () => {
       passwordAuthentication: {
         clientIp: '203.0.113.45',
         verifyPasswordDetailed: async () => ({ valid: true, needsUpgrade: true }),
-        hashPassword: async () => 'pbkdf2-sha256:600000:00112233445566778899aabbccddeeff:'.concat('00'.repeat(32)),
+        hashPassword: async () => 'pbkdf2-sha256:100000:00112233445566778899aabbccddeeff:'.concat('00'.repeat(32)),
         upgradeSharePasswordHash: async () => { throw new Error('D1 unavailable'); },
       },
     });

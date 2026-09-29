@@ -11,7 +11,7 @@ describe('password hashing policy', () => {
     const stored = await hashPassword('test-password');
     const second = await hashPassword('test-password');
 
-    expect(stored).toMatch(/^pbkdf2-sha256:600000:[0-9a-f]{32}:[0-9a-f]{64}$/);
+    expect(stored).toMatch(/^pbkdf2-sha256:100000:[0-9a-f]{32}:[0-9a-f]{64}$/);
     expect(second.split(':')[2]).not.toBe(stored.split(':')[2]);
     await expect(verifyPasswordDetailed('test-password', stored)).resolves.toEqual({
       valid: true,
@@ -35,7 +35,10 @@ describe('password hashing policy', () => {
     'pbkdf2:99999:59f4c454ba32d9dd29cfb537108c4d0b:c5685e17dd3356159b581df88e6580d8db0379a2dc27479d24862bf6f88b7df7',
     'pbkdf2:100000:not-hex:c5685e17dd3356159b581df88e6580d8db0379a2dc27479d24862bf6f88b7df7',
     'pbkdf2:100000:59f4c454ba32d9dd29cfb537108c4d0b:odd',
-    'pbkdf2-sha256:599999:59f4c454ba32d9dd29cfb537108c4d0b:c5685e17dd3356159b581df88e6580d8db0379a2dc27479d24862bf6f88b7df7',
+    'pbkdf2-sha256:99999:59f4c454ba32d9dd29cfb537108c4d0b:c5685e17dd3356159b581df88e6580d8db0379a2dc27479d24862bf6f88b7df7',
+    // Above the Workers production PBKDF2 cap: deriveBits throws there, so never accept it.
+    'pbkdf2-sha256:600000:59f4c454ba32d9dd29cfb537108c4d0b:c5685e17dd3356159b581df88e6580d8db0379a2dc27479d24862bf6f88b7df7',
+    'pbkdf2:600000:59f4c454ba32d9dd29cfb537108c4d0b:c5685e17dd3356159b581df88e6580d8db0379a2dc27479d24862bf6f88b7df7',
     'argon2id:600000:59f4c454ba32d9dd29cfb537108c4d0b:c5685e17dd3356159b581df88e6580d8db0379a2dc27479d24862bf6f88b7df7',
   ])('fails closed for an invalid stored hash: %s', async (storedHash) => {
     await expect(verifyPasswordDetailed('test-password', storedHash)).resolves.toEqual({

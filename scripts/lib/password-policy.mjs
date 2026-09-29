@@ -1,5 +1,7 @@
 export const PBKDF2_SHA256_SCHEME = 'pbkdf2-sha256';
-export const PBKDF2_SHA256_ITERATIONS = 600_000;
+// Cloudflare Workers' WebCrypto rejects PBKDF2 above 100,000 iterations in production
+// (workerd locally does not), so a higher count can never verify once deployed.
+export const PBKDF2_SHA256_ITERATIONS = 100_000;
 export const LEGACY_PBKDF2_SCHEME = 'pbkdf2';
 export const LEGACY_PBKDF2_MIN_ITERATIONS = 100_000;
 export const PBKDF2_SHA256_MAX_ITERATIONS = PBKDF2_SHA256_ITERATIONS;
